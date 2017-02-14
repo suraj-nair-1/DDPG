@@ -13,9 +13,11 @@ class ActorNetworkModel(object):
 
     def __init__(self):  # Initialize random
         actor = Sequential()
-        actor.add(Dense(128, input_dim = 19)
+        actor.add(Dense(256, input_dim = 19))
         actor.add(Activation('relu'))
-        actor.add(Dense(1))
+        actor.add(Dense(128))
+        actor.add(Activation('relu'))
+        actor.add(Dense(10))
         actor.compile(loss='mse',optimizer='adam', metrics=['accuracy'])
 
         self.model = critic

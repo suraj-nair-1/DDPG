@@ -14,11 +14,12 @@ class CriticNetworkModel(object):
 
     def __init__(self):  # Initialize random
         critic = Sequential()
-        critic.add(Dense(128, input_dim = 20)
+        critic.add(Dense(256, input_dim = 29))
+        critic.add(Activation('relu'))
+        critic.add(Dense(128)
         critic.add(Activation('relu'))
         critic.add(Dense(1))
         critic.compile(loss='mse',optimizer='adam', metrics=['accuracy'])
-
         self.model = critic
 
     def initialize_equal(self, otherCriticNetwork):
@@ -26,10 +27,14 @@ class CriticNetworkModel(object):
         
 
     def get_Q(self, state, action):
-        input_feature = state + action
-        self.model.predict(input_feature)
+        features = np.concatenate(state, action)
+        self.model.predict(features)
 
     def updateNetwork(self, mb, y):
+        train = []
+        for transition in mb:
+            train.append(np.concatenate(transition[0], transition[1]))
+        train = np.array(train)
         self.model.fit(mb, y, batch_size = self.BATCH_SIZE, nb_epoch = self.NB_EPOCH)
 
     def updateTarget(self, tau, critic_network):

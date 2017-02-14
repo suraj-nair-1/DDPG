@@ -67,7 +67,7 @@ def main():
 
             # Else calculate reward as distance between ball and goal
             else:
-                reward = np.sqrt((s1[3] - 1)**2 + (s1[4])**2)
+                reward = 1 / np.sqrt((s1[3] - 1)**2 + (s1[4])**2)
             
             # Store transition
             replay_buffer.addToBuffer(s, action, reward, s1)
@@ -77,7 +77,7 @@ def main():
                 mb = replay_buffer.getMinibatch(1000)
 
             # Calculate y_i values
-            y = ddpg.calculate_y(mb, target_critic_network, target_actor_network, gamma)
+            y = np.array(ddpg.calculate_y(mb, target_critic_network, target_actor_network, gamma))
 
             # Update critic and actor
             critic_network.updateNetwork(mb, y)
