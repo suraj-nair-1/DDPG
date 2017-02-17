@@ -42,12 +42,12 @@ MINIBATCH_SIZE = 64
 # ===========================
 def build_summaries():
     episode_reward = tf.Variable(0.)
-    tf.scalar_summary("Reward", episode_reward)
+    tf.summary.scalar("Reward", episode_reward)
     episode_ave_max_q = tf.Variable(0.)
-    tf.scalar_summary("Qmax Value", episode_ave_max_q)
+    tf.summary.scalar("Qmax Value", episode_ave_max_q)
 
     summary_vars = [episode_reward, episode_ave_max_q]
-    summary_ops = tf.merge_all_summaries()
+    summary_ops = tf.summary.merge_all()
 
     return summary_ops, summary_vars
 
@@ -68,8 +68,8 @@ def main(_):
 
         state_dim = 19
         action_dim = 10
-        low_action_bound = #### TODO:LOW BOUNDS
-        high_action_bound = #### TODO:HIGH BOUNDS
+        low_action_bound = -100 #[-100, -180]
+        high_action_bound = 100 #[100, 180]
 
         actor = ActorNetwork(sess, state_dim, action_dim, low_action_bound, \
             high_action_bound, ACTOR_LEARNING_RATE, TAU)
@@ -80,8 +80,8 @@ def main(_):
         # Set up summary Ops
         summary_ops, summary_vars = build_summaries()
 
-        sess.run(tf.initialize_all_variables())
-        writer = tf.train.SummaryWriter(SUMMARY_DIR, sess.graph)
+        sess.run(tf.global_variables_initializer())
+        writer = tf.summary.FileWriter(SUMMARY_DIR, sess.graph)
 
         # Initialize target network weights
         actor.update_target_network()
@@ -106,19 +106,33 @@ def main(_):
                 s = s1
 
                 # Added exploration noise
-                s_noise = np.reshape(s, (1, 19)) + ***NOISE***
-                a = actor.predict(s_noise)
+                s_noise = np.reshape(s, (1, 19)) #+ np.random.rand(1, 19)
+                # print s_noise
+                a = actor.predict(s_noise)[0]
+                print a
+                # a += np.random.rand(10)
+                index = np.argmax(a[:4])
+                
+                if index == 0:
+                    action  = (DASH, a[4], a[5])
+                elif index == 1:
+                    action = (TURN, a[6])
+                elif index == 2:
+                    action = (TACKLE, a[7])
+                else:
+                    action = (KICK, a[8], a[9])
 
-                action = # TODO: FUNCTION OF a THAT CAN BE PASSED TO hfo.act (maybe switch block?)
                 # Make action and step forward in time
-                hfo.act(action)
+                # print action
+                hfo.act(*action)
+                # print "\n"
                 terminal = hfo.step()
 
                 # Get new state s_(t+1)
                 s1 = hfo.getState()
 
                 # If game has finished, calculate reward based on whether or not a goal was scored
-                if s1 != IN_GAME:
+                if terminal != IN_GAME:
                     if status == 1:
                         reward = 99999
                     elif status == 2:
@@ -126,7 +140,8 @@ def main(_):
 
                 # Else calculate reward as distance between ball and goal
                 else:
-                    reward = 1 / np.sqrt((s1[3] - 1)**2 + (s1[4])**2)
+                    # reward = 1. / np.sqrt((s1[3] - 1)**2 + (s1[4])**2) + 1. / np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[2])**2)
+                    reward = 1. / np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[1])**2)
 
                 replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), reward, \
                     terminal, np.reshape(s1, (actor.s_dim,)))
@@ -138,11 +153,14 @@ def main(_):
                         replay_buffer.sample_batch(MINIBATCH_SIZE)
 
                     # Calculate targets
+                    # print s1_batch
+                    # print s1_batch.shape
+                    # print s1_batch.dtype
                     target_q = critic.predict_target(s1_batch, actor.predict_target(s1_batch))
 
                     y_i = []
                     for k in xrange(MINIBATCH_SIZE):
-                        if t_batch[k] == IN_GAME:
+                        if t_batch[k] != IN_GAME:
                             y_i.append(r_batch[k])
                         else:
                             y_i.append(r_batch[k] + GAMMA * target_q[k])

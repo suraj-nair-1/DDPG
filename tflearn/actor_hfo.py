@@ -51,12 +51,13 @@ class ActorNetwork(object):
     def create_actor_network(self):
         inputs = tflearn.input_data(shape=[None, self.s_dim])
         net = tflearn.fully_connected(inputs, 400, activation='relu')
-        net = tflearn.fully_connected(net, 300, activation='relu')
+        net2 = tflearn.fully_connected(net, 300, activation='relu')
         # TODO: Final layer weights need to be initted to their ranges
-        w_init = tflearn.initializations.uniform(minval=SOMETHING, maxval=SOMETHING)
-        out = tflearn.fully_connected(net, self.a_dim, activation='tanh', weights_init=w_init)
+        w_init = tflearn.initializations.uniform(minval=-1, maxval=1)
+        out = tflearn.fully_connected(net2, self.a_dim, activation='sigmoid', weights_init=w_init)
 
         # Scale output to low_action_bound to high_action_bound
+        # scaled_out = tf.div(out, tf.reduce_sum(out))
         scaled_out = tf.mul(out, self.high_action_bound - self.low_action_bound) + self.low_action_bound
         return inputs, out, scaled_out
 
@@ -72,7 +73,8 @@ class ActorNetwork(object):
         })
 
     def predict_target(self, inputs):
-        return self.sess.run(self.target_scaled_out, feed_dict={
+        return self.sess.run(self.scaled_out, feed_dict={
+            self.inputs: inputs,
             self.target_inputs: inputs
         })
 

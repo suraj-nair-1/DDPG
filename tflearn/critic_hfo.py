@@ -4,6 +4,8 @@ import tensorflow as tf
 import numpy as np
 import tflearn
 
+MINIBATCH_SIZE = 64
+
 class CriticNetwork(object):
     """
     Input to the network is the state and action, output is Q(s,a).
@@ -55,12 +57,12 @@ class CriticNetwork(object):
         t1 = tflearn.fully_connected(net, 300)
         t2 = tflearn.fully_connected(action, 300)
 
-        net = tflearn.activation(tf.matmul(net,t1.W) + tf.matmul(action, t2.W) + t2.b, activation='relu')
+        net2 = tflearn.activation(tf.matmul(net,t1.W) + tf.matmul(action, t2.W) + t2.b, activation='relu')
 
         # linear layer connected to 1 output representing Q(s,a)
         # Weights are init to Uniform[-3e-3, 3e-3]
         w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
-        out = tflearn.fully_connected(net, 1, weights_init=w_init)
+        out = tflearn.fully_connected(net2, 1, weights_init=w_init)
         return inputs, action, out
 
     def train(self, inputs, action, predicted_q_value):

@@ -5,7 +5,6 @@ from collections import deque
 import random
 import numpy as np
 
-
 class ReplayBuffer(object):
 
     def __init__(self, buffer_size, random_seed=123):

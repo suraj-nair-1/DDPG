@@ -1,10 +1,10 @@
 #!/bin/bash
 
-./bin/HFO --offense-agents=2 --no-sync --fullstate &
+./bin/HFO --offense-agents=2  --defense-npcs=1 --no-sync --fullstate &
 sleep 5
-./example/continuous_space_test_agent 6000 &
+python ../DDPG/tflearn/continuous_space_test_agent.py 6000 &
 sleep 5
-./example/continuous_space_test_agent 6000 &
+python ../DDPG/tflearn/continuous_space_test_agent.py 6000 &
 
 # The magic line
 #   $$ holds the PID for this script
