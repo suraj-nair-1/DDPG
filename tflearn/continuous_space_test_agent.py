@@ -25,7 +25,7 @@ ACTOR_LEARNING_RATE = 0.0001
 # Base learning rate for the Critic Network
 CRITIC_LEARNING_RATE = 0.001
 # Discount factor
-GAMMA = 0.99
+GAMMA = 0.29
 # Soft target update param
 TAU = 0.001
 
@@ -66,7 +66,7 @@ def main(_):
         np.random.seed(RANDOM_SEED)
         tf.set_random_seed(RANDOM_SEED)
 
-        state_dim = 19
+        state_dim = 13
         action_dim = 10
         low_action_bound = -100 #[-100, -180]
         high_action_bound = 100 #[100, 180]
@@ -98,6 +98,7 @@ def main(_):
             status = IN_GAME
             # Grab the state features from the environment
             s1 = hfo.getState()
+            old_reward = 2
 
             for j in xrange(MAX_EP_STEPS):
 
@@ -106,12 +107,13 @@ def main(_):
                 s = s1
 
                 # Added exploration noise
-                s_noise = np.reshape(s, (1, 19)) #+ np.random.rand(1, 19)
+                s_noise = np.reshape(s, (1, state_dim)) #+ np.random.rand(1, 19)
                 # print s_noise
                 a = actor.predict(s_noise)[0]
-                print a
+                print "Current Action: ", a
                 # a += np.random.rand(10)
                 index = np.argmax(a[:4])
+                print index
                 
                 if index == 0:
                     action  = (DASH, a[4], a[5])
@@ -143,7 +145,14 @@ def main(_):
                     # reward = 1. / np.sqrt((s1[3] - 1)**2 + (s1[4])**2) + 1. / np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[2])**2)
                     reward = 1. / np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[1])**2)
 
-                replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), reward, \
+                r = reward - old_reward
+                if r == 0:
+                    r = -1.0
+                print "Current Reward", r
+                old_reward = reward
+
+
+                replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r, \
                     terminal, np.reshape(s1, (actor.s_dim,)))
 
                 # Keep adding experience to the memory until
@@ -151,6 +160,8 @@ def main(_):
                 if replay_buffer.size() > MINIBATCH_SIZE:
                     s_batch, a_batch, r_batch, t_batch, s1_batch = \
                         replay_buffer.sample_batch(MINIBATCH_SIZE)
+
+                    print "REPLAY SIZE ", replay_buffer.size()
 
                     # Calculate targets
                     # print s1_batch
@@ -179,7 +190,7 @@ def main(_):
                     actor.update_target_network()
                     critic.update_target_network()
 
-                ep_reward += reward
+                ep_reward += r
 
                 if terminal:
 
