@@ -25,7 +25,7 @@ ACTOR_LEARNING_RATE = 0.0001
 # Base learning rate for the Critic Network
 CRITIC_LEARNING_RATE = 0.001
 # Discount factor
-GAMMA = 0.29
+GAMMA = 0.2
 # Soft target update param
 TAU = 0.001
 
@@ -34,7 +34,7 @@ SUMMARY_DIR = './results/tf_ddpg'
 RANDOM_SEED = 1234
 # Size of replay buffer
 BUFFER_SIZE = 10000
-MINIBATCH_SIZE = 64
+MINIBATCH_SIZE = 256
 
 
 # ===========================
@@ -136,18 +136,18 @@ def main(_):
                 # If game has finished, calculate reward based on whether or not a goal was scored
                 if terminal != IN_GAME:
                     if status == 1:
-                        reward = 99999
+                        reward = 100
                     elif status == 2:
-                        reward = -99999
+                        reward = -.001
 
                 # Else calculate reward as distance between ball and goal
                 else:
-                    # reward = 1. / np.sqrt((s1[3] - 1)**2 + (s1[4])**2) + 1. / np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[2])**2)
-                    reward = 1. / np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[1])**2)
+                    reward = 1. / np.sqrt((s1[3] - 1)**2 + (s1[4])**2) + 1. / np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[2])**2)
+                    # reward = 1. / np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[1])**2)
 
                 r = reward - old_reward
                 if r == 0:
-                    r = -1.0
+                    r = -.0001
                 print "Current Reward", r
                 old_reward = reward
 
@@ -202,7 +202,7 @@ def main(_):
                     writer.add_summary(summary_str, i)
                     writer.flush()
 
-                    print '| Reward: %.2i' % int(ep_reward), " | Episode", i, \
+                    print '| Reward: %.4i' % int(ep_reward), " | Episode", i, \
                         '| Qmax: %.4f' % (ep_ave_max_q / float(j))
 
                     break

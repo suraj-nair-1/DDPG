@@ -4,7 +4,7 @@ import tensorflow as tf
 import numpy as np
 import tflearn
 
-MINIBATCH_SIZE = 64
+MINIBATCH_SIZE = 256
 
 class CriticNetwork(object):
     """
