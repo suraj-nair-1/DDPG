@@ -25,7 +25,7 @@ ACTOR_LEARNING_RATE = 0.0001
 # Base learning rate for the Critic Network
 CRITIC_LEARNING_RATE = 0.001
 # Discount factor
-GAMMA = 0.2
+GAMMA = 0.9
 # Soft target update param
 TAU = 0.001
 
@@ -68,8 +68,8 @@ def main(_):
 
         state_dim = 13
         action_dim = 10
-        low_action_bound = -100 #[-100, -180]
-        high_action_bound = 100 #[100, 180]
+        low_action_bound = np.array([-100, -180, -180, -180, 0, -180])
+        high_action_bound = np.array([100, 180, 180, 180, 100, 180])
 
         actor = ActorNetwork(sess, state_dim, action_dim, low_action_bound, \
             high_action_bound, ACTOR_LEARNING_RATE, TAU)
@@ -98,7 +98,7 @@ def main(_):
             status = IN_GAME
             # Grab the state features from the environment
             s1 = hfo.getState()
-            old_reward = 2
+            old_reward = 0
 
             for j in xrange(MAX_EP_STEPS):
 
@@ -138,16 +138,16 @@ def main(_):
                     if status == 1:
                         reward = 100
                     elif status == 2:
-                        reward = -.001
+                        reward = -200000 * np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[1])**2)
 
                 # Else calculate reward as distance between ball and goal
                 else:
-                    reward = 1. / np.sqrt((s1[3] - 1)**2 + (s1[4])**2) + 1. / np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[2])**2)
-                    # reward = 1. / np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[1])**2)
+                    # reward = 1. / np.sqrt((s1[3] - 1)**2 + (s1[4])**2) + 1. / np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[2])**2)
+                    reward = -200000 * np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[1])**2)
 
-                r = reward - old_reward
-                if r == 0:
-                    r = -.0001
+                r = reward
+                # if r == 0:
+                #     r = -1
                 print "Current Reward", r
                 old_reward = reward
 
@@ -177,9 +177,10 @@ def main(_):
                             y_i.append(r_batch[k] + GAMMA * target_q[k])
 
                     # Update the critic given the targets
-                    predicted_q_value, _ = critic.train(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
+                    # predicted_q_value, _ = critic.train(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
+                    critic.train(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
 
-                    ep_ave_max_q += np.amax(predicted_q_value)
+                    # ep_ave_max_q += np.amax(predicted_q_value)
 
                     # Update the actor policy using the sampled gradient
                     a_outs = actor.predict(s_batch)
@@ -202,7 +203,7 @@ def main(_):
                     writer.add_summary(summary_str, i)
                     writer.flush()
 
-                    print '| Reward: %.4i' % int(ep_reward), " | Episode", i, \
+                    print '| Reward: %.4i' % float(ep_reward), " | Episode", i, \
                         '| Qmax: %.4f' % (ep_ave_max_q / float(j))
 
                     break

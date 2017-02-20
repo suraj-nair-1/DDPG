@@ -66,7 +66,8 @@ class CriticNetwork(object):
         return inputs, action, out
 
     def train(self, inputs, action, predicted_q_value):
-        return self.sess.run([self.out, self.optimize], feed_dict={
+        # return self.sess.run([self.out, self.optimize], feed_dict={
+        return self.sess.run(self.optimize, feed_dict={
             self.inputs: inputs,
             self.action: action,
             self.predicted_q_value: predicted_q_value
