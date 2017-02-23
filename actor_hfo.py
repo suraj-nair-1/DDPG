@@ -28,7 +28,7 @@ class ActorNetworkModel(object):
 
     def select_action(curr_state):
         # use explorationNoise
-        return action + np.random.uniform(-self.explorationNoise, self.explorationNoise)
+        return action # + np.random.uniform(-self.explorationNoise, self.explorationNoise)
 
     def get_action(state):
         return action

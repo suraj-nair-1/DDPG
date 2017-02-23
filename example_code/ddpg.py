@@ -314,6 +314,7 @@ def train(sess, env, actor, critic):
 def main(_):
     with tf.Session() as sess:
 
+        # env = gym.wrappers.Monitor(gym.make(ENV_NAME), MONITOR_DIR)
         env = gym.make(ENV_NAME)
         np.random.seed(RANDOM_SEED)
         tf.set_random_seed(RANDOM_SEED)
@@ -331,11 +332,11 @@ def main(_):
         critic = CriticNetwork(sess, state_dim, action_dim, \
             CRITIC_LEARNING_RATE, TAU, actor.get_num_trainable_vars())
 
-        if GYM_MONITOR_EN:
-            if not RENDER_ENV:
-                env.monitor.start(MONITOR_DIR, video_callable=False, force=True)
-            else:
-                env.monitor.start(MONITOR_DIR, force=True)
+        # if GYM_MONITOR_EN:
+        #     if not RENDER_ENV:
+        #         env.monitor.start(MONITOR_DIR, video_callable=False, force=True)
+        #     else:
+        #         env.monitor.start(MONITOR_DIR, force=True)
 
         train(sess, env, actor, critic)
 

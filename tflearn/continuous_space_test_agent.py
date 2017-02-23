@@ -21,9 +21,9 @@ MAX_EPISODES = 50000
 # Max episode length
 MAX_EP_STEPS = 1000
 # Base learning rate for the Actor network
-ACTOR_LEARNING_RATE = 0.0001
+ACTOR_LEARNING_RATE = .01
 # Base learning rate for the Critic Network
-CRITIC_LEARNING_RATE = 0.001
+CRITIC_LEARNING_RATE = .1
 # Discount factor
 GAMMA = 0.9
 # Soft target update param
@@ -99,8 +99,12 @@ def main(_):
             # Grab the state features from the environment
             s1 = hfo.getState()
             old_reward = 0
+            # print "********************"
+            # print "Episode", i
+            # print "********************"
 
             for j in xrange(MAX_EP_STEPS):
+
 
                 # # Grab the state features from the environment
                 # features = hfo.getState()
@@ -110,7 +114,8 @@ def main(_):
                 s_noise = np.reshape(s, (1, state_dim)) #+ np.random.rand(1, 19)
                 # print s_noise
                 a = actor.predict(s_noise)[0]
-                print "Current Action: ", a
+                print a
+                # index = np.random.choice(4, 1000, p=a[:4])[0]
                 # a += np.random.rand(10)
                 index = np.argmax(a[:4])
                 print index
@@ -133,23 +138,33 @@ def main(_):
                 # Get new state s_(t+1)
                 s1 = hfo.getState()
 
-                # If game has finished, calculate reward based on whether or not a goal was scored
-                if terminal != IN_GAME:
-                    if status == 1:
-                        reward = 100
-                    elif status == 2:
-                        reward = -200000 * np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[1])**2)
+                curr_ball_prox = 1 - 2*(np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[1])**2) / np.sqrt(20))
+                curr_goal_dist = np.sqrt((s1[3] - 1)**2 + (s1[4])**2)
+                curr_kickable = s[5]
 
-                # Else calculate reward as distance between ball and goal
-                else:
-                    # reward = 1. / np.sqrt((s1[3] - 1)**2 + (s1[4])**2) + 1. / np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[2])**2)
-                    reward = -200000 * np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[1])**2)
+                print curr_ball_prox
+                print curr_goal_dist
 
-                r = reward
+                r = 0
+                if j != 0:
+                    # If game has finished, calculate reward based on whether or not a goal was scored
+                    if terminal != IN_GAME:
+                        if status == 1:
+                            r += 5
+
+                    # Else calculate reward as distance between ball and goal
+                    r += curr_ball_prox - old_ball_prox
+                    r += 0.6 * -(curr_goal_dist - old_goal_dist)
+                    if (not old_kickable) and (curr_kickable):
+                        r += 1
+
+                old_ball_prox = curr_ball_prox
+                old_goal_dist = curr_goal_dist
+                old_kickable = curr_kickable
+
                 # if r == 0:
                 #     r = -1
                 print "Current Reward", r
-                old_reward = reward
 
 
                 replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r, \
@@ -197,14 +212,14 @@ def main(_):
 
                     summary_str = sess.run(summary_ops, feed_dict={
                         summary_vars[0]: ep_reward,
-                        summary_vars[1]: ep_ave_max_q / float(j)
+                        summary_vars[1]: ep_ave_max_q / float(j+1)
                     })
 
                     writer.add_summary(summary_str, i)
                     writer.flush()
 
                     print '| Reward: %.4i' % float(ep_reward), " | Episode", i, \
-                        '| Qmax: %.4f' % (ep_ave_max_q / float(j))
+                        '| Qmax: %.4f' % (ep_ave_max_q / float(j+1))
 
                     break
 
