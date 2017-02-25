@@ -34,7 +34,7 @@ SUMMARY_DIR = './results/tf_ddpg'
 RANDOM_SEED = 1234
 # Size of replay buffer
 BUFFER_SIZE = 10000
-MINIBATCH_SIZE = 256
+MINIBATCH_SIZE = 2048
 
 
 # ===========================
@@ -115,9 +115,16 @@ def main(_):
                 # print s_noise
                 a = actor.predict(s_noise)[0]
                 print a
-                # index = np.random.choice(4, 1000, p=a[:4])[0]
+                if replay_buffer.size() > MINIBATCH_SIZE:
+                    index = np.argmax(a[:4])
+                else:
+                    # index = np.random.choice(4, 1000, p=a[:4])[0]
+                    index = 0
+                    a[4] = np.random.uniform(-100, 100)
+                    a[5] = np.random.uniform(-180, 180)
+                    # print index
                 # a += np.random.rand(10)
-                index = np.argmax(a[:4])
+                # index = np.argmax(a[:4])
                 print index
                 
                 if index == 0:
@@ -182,6 +189,8 @@ def main(_):
                     # print s1_batch
                     # print s1_batch.shape
                     # print s1_batch.dtype
+                    # print s1_batch.shape
+                    # print actor.predict_target(s1_batch)
                     target_q = critic.predict_target(s1_batch, actor.predict_target(s1_batch))
 
                     y_i = []
@@ -205,6 +214,7 @@ def main(_):
                     # Update target networks
                     actor.update_target_network()
                     critic.update_target_network()
+                    # break
 
                 ep_reward += r
 
@@ -222,6 +232,8 @@ def main(_):
                         '| Qmax: %.4f' % (ep_ave_max_q / float(j+1))
 
                     break
+            # print "FINISH"
+            # break
 
 if __name__ == '__main__':
     tf.app.run()

@@ -51,13 +51,14 @@ class ActorNetwork(object):
 
     def create_actor_network(self):
         inputs = tflearn.input_data(shape=[None, self.s_dim])
-        # net = tflearn.fully_connected(inputs, 400, activation='relu')
-        # net2 = tflearn.fully_connected(net, 300, activation='relu')
+        net = tflearn.fully_connected(inputs, 400, activation='relu')
+        net2 = tflearn.fully_connected(net, 300, activation='relu')
         # TODO: Final layer weights need to be initted to their ranges
         w_init = tflearn.initializations.uniform(minval=-.003, maxval=.003)
-        out = tflearn.fully_connected(inputs, self.a_dim, activation='tanh', weights_init=w_init)
-        choice = tf.slice(out, [0,0], [1, 4])
-        params = tf.slice(out, [0,4], [1, 6])
+        out = tflearn.fully_connected(net2, self.a_dim, activation='tanh', weights_init=w_init)
+        # print out
+        choice = tf.slice(out, [0,0], [-1, 4])
+        params = tf.slice(out, [0,4], [-1, 6])
         # print choice
         # print params
         choice_probs = tflearn.activations.softmax(choice)
@@ -66,6 +67,8 @@ class ActorNetwork(object):
         # print tf.concat([tflearn.activations.sigmoid(choice), \
         #     tf.mul(params, self.high_action_bound - self.low_action_bound) + self.low_action_bound], 0)
         # print "***************"
+        # print choice_probs
+        # print params2
         scaled_out = tflearn.merge([choice_probs, params2], 'concat')
         # print scaled_out
 
