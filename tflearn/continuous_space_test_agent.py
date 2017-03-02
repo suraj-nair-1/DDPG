@@ -29,6 +29,13 @@ GAMMA = 0.9
 # Soft target update param
 TAU = 0.001
 
+# Noise for exploration
+EPS_GREEDY_INIT = 1.0
+EPS_EPISODES_ANNEAL = 100000
+# Parameters in format of theta-mu-sigma
+OU_NOISE_PARAMS = [[5.0, 0.0, 3.0], [5.0, 0.0, 3.0], [5.0, 0.0, 3.0],
+                   [5.0, 0.0, 3.0], [5.0, 0.0, 3.0], [5.0, 0.0, 3.0]]
+
 # Directory for storing tensorboard summary results
 SUMMARY_DIR = './results/tf_ddpg'
 RANDOM_SEED = 1234
@@ -72,7 +79,7 @@ def main(_):
         high_action_bound = np.array([100, 180, 180, 180, 100, 180])
 
         actor = ActorNetwork(sess, state_dim, action_dim, low_action_bound, \
-            high_action_bound, ACTOR_LEARNING_RATE, TAU)
+            high_action_bound, ACTOR_LEARNING_RATE, TAU, OU_NOISE_PARAMS)
 
         critic = CriticNetwork(sess, state_dim, action_dim, \
             CRITIC_LEARNING_RATE, TAU, actor.get_num_trainable_vars())
@@ -116,7 +123,8 @@ def main(_):
                 a = actor.predict(s_noise)[0]
                 print a
                 if replay_buffer.size() > MINIBATCH_SIZE:
-                    index = np.argmax(a[:4])
+                    index, a = actor.add_noise(a, min(0.0, EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL))
+                    # index = np.argmax(a[:4])
                 else:
                     # index = np.random.choice(4, 1000, p=a[:4])[0]
                     index = 0
@@ -126,7 +134,7 @@ def main(_):
                 # a += np.random.rand(10)
                 # index = np.argmax(a[:4])
                 print index
-                
+
                 if index == 0:
                     action  = (DASH, a[4], a[5])
                 elif index == 1:

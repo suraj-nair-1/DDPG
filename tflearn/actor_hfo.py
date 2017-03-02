@@ -12,7 +12,7 @@ class ActorNetwork(object):
     The output layer activation is a tanh to keep the action
     between -2 and 2
     """
-    def __init__(self, sess, state_dim, action_dim, low_action_bound, high_action_bound, learning_rate, tau):
+    def __init__(self, sess, state_dim, action_dim, low_action_bound, high_action_bound, learning_rate, tau, ou_noise_params):
         self.sess = sess
         self.s_dim = state_dim
         self.a_dim = action_dim
@@ -20,6 +20,8 @@ class ActorNetwork(object):
         self.high_action_bound = high_action_bound
         self.learning_rate = learning_rate
         self.tau = tau
+        self.ou_noise_params = ou_noise_params
+        self.ou_noise = [r[1] for r in self.ou_noise_params]
 
         # Actor Network
         self.inputs, self.out, self.scaled_out = self.create_actor_network()
@@ -99,3 +101,23 @@ class ActorNetwork(object):
 
     def get_num_trainable_vars(self):
         return self.num_trainable_vars
+
+    def add_noise(self, a, eps):
+        # Update OU noise for continuous params
+        for i in range(self.ou_noise):
+            dWt = np.random.normal(0.0, 1.0)
+            [theta, mu, sigma] = self.ou_noise_params[i]
+            self.ou_noise[i] += theta * (mu - self.ou_noise[i]) * 1.0 + sigma * dWt
+
+        # Update continuous params
+        for i in range(self.ou_noise):
+            a[4 + i] += self.ou_noise[i]
+
+        # With probability epsilon, set all discrete actions to be equally likely
+        if np.random.random_sample() <= eps:
+            a[:4] = [0.25, 0.25, 0.25, 0.25]
+            index = np.random.randint(4)
+        else:
+            index = np.argmax(a[:4])
+
+        return index, a
