@@ -35,8 +35,8 @@ class ActorNetwork(object):
 
         # Op for periodically updating target network with online network weights
         self.update_target_network_params = \
-            [self.target_network_params[i].assign(tf.mul(self.network_params[i], self.tau) + \
-                tf.mul(self.target_network_params[i], 1. - self.tau))
+            [self.target_network_params[i].assign(tf.multiply(self.network_params[i], self.tau) + \
+                tf.multiply(self.target_network_params[i], 1. - self.tau))
                 for i in range(len(self.target_network_params))]
 
         # This gradient will be provided by the critic network
@@ -65,7 +65,7 @@ class ActorNetwork(object):
         # print params
         choice_probs = tflearn.activations.softmax(choice)
         # print choice_probs
-        params2 = tf.mul(tf.div(params + 1, 2), self.high_action_bound - self.low_action_bound) + self.low_action_bound
+        params2 = tf.multiply(tf.divide(params + 1, 2), self.high_action_bound - self.low_action_bound) + self.low_action_bound
         # print tf.concat([tflearn.activations.sigmoid(choice), \
         #     tf.mul(params, self.high_action_bound - self.low_action_bound) + self.low_action_bound], 0)
         # print "***************"
