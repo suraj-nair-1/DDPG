@@ -104,20 +104,21 @@ class ActorNetwork(object):
 
     def add_noise(self, a, eps):
         # Update OU noise for continuous params
-        for i in range(self.ou_noise):
+        for i in range(len(self.ou_noise)):
             dWt = np.random.normal(0.0, 1.0)
             [theta, mu, sigma] = self.ou_noise_params[i]
             self.ou_noise[i] += theta * (mu - self.ou_noise[i]) * 1.0 + sigma * dWt
+        print "NOISE", self.ou_noise
 
         # Update continuous params
-        for i in range(self.ou_noise):
+        for i in range(len(self.ou_noise)):
             a[4 + i] += self.ou_noise[i]
 
         # With probability epsilon, set all discrete actions to be equally likely
         if np.random.random_sample() <= eps:
-            a[:4] = [0.25, 0.25, 0.25, 0.25]
-            index = np.random.randint(4)
-        else:
-            index = np.argmax(a[:4])
+            # print "RANDOM AF &&&&&&&&&&&&&&&&&"
+            acts = np.random.uniform(1, 10, 4)
+            a[:4] = acts / np.sum(acts)
+        index = np.argmax(a[:4])
 
         return index, a

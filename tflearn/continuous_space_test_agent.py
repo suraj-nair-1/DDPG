@@ -33,15 +33,17 @@ TAU = 0.001
 EPS_GREEDY_INIT = 1.0
 EPS_EPISODES_ANNEAL = 100000
 # Parameters in format of theta-mu-sigma
-OU_NOISE_PARAMS = [[5.0, 0.0, 3.0], [5.0, 0.0, 3.0], [5.0, 0.0, 3.0],
-                   [5.0, 0.0, 3.0], [5.0, 0.0, 3.0], [5.0, 0.0, 3.0]]
+# OU_NOISE_PARAMS = [[5.0, 0.0, 3.0], [5.0, 0.0, 3.0], [5.0, 0.0, 3.0],
+#                    [5.0, 0.0, 3.0], [5.0, 0.0, 3.0], [5.0, 0.0, 3.0]]
+
+OU_NOISE_PARAMS = [[.1, 0.0, 3.0]] * 6
 
 # Directory for storing tensorboard summary results
 SUMMARY_DIR = './results/tf_ddpg'
 RANDOM_SEED = 1234
 # Size of replay buffer
 BUFFER_SIZE = 10000
-MINIBATCH_SIZE = 2048
+MINIBATCH_SIZE = 128
 
 
 # ===========================
@@ -121,9 +123,8 @@ def main(_):
                 s_noise = np.reshape(s, (1, state_dim)) #+ np.random.rand(1, 19)
                 # print s_noise
                 a = actor.predict(s_noise)[0]
-                print a
                 if replay_buffer.size() > MINIBATCH_SIZE:
-                    index, a = actor.add_noise(a, min(0.0, EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL))
+                    index, a = actor.add_noise(a, max(0.0, EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL))
                     # index = np.argmax(a[:4])
                 else:
                     # index = np.random.choice(4, 1000, p=a[:4])[0]
@@ -133,6 +134,7 @@ def main(_):
                     # print index
                 # a += np.random.rand(10)
                 # index = np.argmax(a[:4])
+                print a
                 print index
 
                 if index == 0:

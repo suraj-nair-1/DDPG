@@ -1,5 +1,4 @@
 #!/bin/bash
-
 ./bin/HFO --offense-agents=1  --defense-npcs=1 --no-sync --fullstate &
 sleep 5
 python ../DDPG/tflearn/continuous_space_test_agent.py 6000 &
