@@ -43,7 +43,7 @@ SUMMARY_DIR = './results/tf_ddpg'
 RANDOM_SEED = 1234
 # Size of replay buffer
 BUFFER_SIZE = 10000
-MINIBATCH_SIZE = 128
+MINIBATCH_SIZE = 256
 
 
 # ===========================
@@ -77,14 +77,14 @@ def main(_):
 
         state_dim = 13
         action_dim = 10
-        low_action_bound = np.array([-100, -180, -180, -180, 0, -180])
-        high_action_bound = np.array([100, 180, 180, 180, 100, 180])
+        low_action_bound = np.array([-100., -180., -180., -180., 0., -180.])
+        high_action_bound = np.array([100., 180., 180., 180., 100., 180.])
 
         actor = ActorNetwork(sess, state_dim, action_dim, low_action_bound, \
             high_action_bound, ACTOR_LEARNING_RATE, TAU, OU_NOISE_PARAMS)
 
-        critic = CriticNetwork(sess, state_dim, action_dim, \
-            CRITIC_LEARNING_RATE, TAU, actor.get_num_trainable_vars())
+        critic = CriticNetwork(sess, state_dim, action_dim, low_action_bound, high_action_bound, \
+            CRITIC_LEARNING_RATE, TAU, actor.get_num_trainable_vars(), MINIBATCH_SIZE)
 
         # Set up summary Ops
         summary_ops, summary_vars = build_summaries()

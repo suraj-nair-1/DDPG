@@ -4,14 +4,12 @@ import tensorflow as tf
 import numpy as np
 import tflearn
 
-MINIBATCH_SIZE = 256
-
 class CriticNetwork(object):
     """
     Input to the network is the state and action, output is Q(s,a).
     The action must be obtained from the output of the Actor network.
     """
-    def __init__(self, sess, state_dim, action_dim, learning_rate, tau, num_actor_vars):
+    def __init__(self, sess, state_dim, action_dim, low_act_bound, high_act_bound, learning_rate, tau, num_actor_vars, MINIBATCH_SIZE):
         self.sess = sess
         self.s_dim = state_dim
         self.a_dim = action_dim
@@ -30,7 +28,7 @@ class CriticNetwork(object):
 
         # Op for periodically updating target network with online network weights with regularization
         self.update_target_network_params = \
-            [self.target_network_params[i].assign(tf.multiply(self.network_params[i], self.tau) + tf.multiply(self.target_network_params[i], 1. - self.tau))
+            [self.target_network_params[i].assign(tf.mul(self.network_params[i], self.tau) + tf.mul(self.target_network_params[i], 1. - self.tau))
                 for i in range(len(self.target_network_params))]
 
         # Network target (y_i)
@@ -45,7 +43,25 @@ class CriticNetwork(object):
         # this will sum up the gradients of each critic output in the minibatch
         # w.r.t. that action (i.e., sum of dy/dx over all ys). We then divide
         # through by the minibatch size to scale the gradients down correctly.
-        self.action_grads = tf.div(tf.gradients(self.out, self.action), tf.constant(MINIBATCH_SIZE, dtype=tf.float32))
+        n2 = tf.div(tf.gradients(self.out, self.action), tf.constant(MINIBATCH_SIZE, dtype=tf.float32))
+        # print n2
+        # print self.action
+        choice = tf.slice(n2, [0,0,0], [-1, -1, 4])
+        params = tf.slice(n2, [0,0,4], [-1, -1, 6])
+
+        high = tf.constant([[high_act_bound.tolist()]*MINIBATCH_SIZE])
+        # print high
+        low = tf.constant([[low_act_bound.tolist()]*MINIBATCH_SIZE])
+        # print high - params
+        pmax = tf.div((high - params), (high - low))
+        pmin = tf.div((params - low), (high - low))
+        # print pmax
+
+        comparison = tf.less(tf.constant(0.0), params)
+
+        # print comparison
+        self.action_grads =  tflearn.merge([choice, tf.select(comparison, pmax, pmin)], axis = 2, mode ='concat')
+
 
     def create_critic_network(self):
         inputs = tflearn.input_data(shape=[None, self.s_dim])
@@ -59,7 +75,7 @@ class CriticNetwork(object):
 
         # net2 = tflearn.activation(tf.matmul(net,t1.W) + tf.matmul(action, t2.W) + t2.b, activation='relu')
         net2 = tflearn.activation(tflearn.merge([tf.matmul(net,t1.W), tf.matmul(action, t2.W)], 'concat'), activation='relu')
-        tflearn.merge([inputs, action], 'concat')
+        # tflearn.merge([inputs, action], 'concat')
 
         # linear layer connected to 1 output representing Q(s,a)
         # Weights are init to Uniform[-3e-3, 3e-3]
