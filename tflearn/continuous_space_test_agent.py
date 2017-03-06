@@ -17,7 +17,7 @@ from critic_hfo import CriticNetwork
 
 
 # Max training steps
-MAX_EPISODES = 50000
+MAX_EPISODES = 500000
 # Max episode length
 MAX_EP_STEPS = 1000
 # Base learning rate for the Actor network
@@ -31,7 +31,7 @@ TAU = 0.001
 
 # Noise for exploration
 EPS_GREEDY_INIT = 1.0
-EPS_EPISODES_ANNEAL = 100000
+EPS_EPISODES_ANNEAL = 1000
 # Parameters in format of theta-mu-sigma
 # OU_NOISE_PARAMS = [[5.0, 0.0, 3.0], [5.0, 0.0, 3.0], [5.0, 0.0, 3.0],
 #                    [5.0, 0.0, 3.0], [5.0, 0.0, 3.0], [5.0, 0.0, 3.0]]
@@ -42,8 +42,8 @@ OU_NOISE_PARAMS = [[.1, 0.0, 3.0]] * 6
 SUMMARY_DIR = './results/tf_ddpg'
 RANDOM_SEED = 1234
 # Size of replay buffer
-BUFFER_SIZE = 10000
-MINIBATCH_SIZE = 256
+BUFFER_SIZE = 100000
+MINIBATCH_SIZE = 2048
 
 
 # ===========================
@@ -238,8 +238,8 @@ def main(_):
                     writer.add_summary(summary_str, i)
                     writer.flush()
 
-                    print '| Reward: %.4i' % float(ep_reward), " | Episode", i, \
-                        '| Qmax: %.4f' % (ep_ave_max_q / float(j+1))
+                    print '| Reward: ' , float(ep_reward), " | Episode", i, \
+                        '| Qmax:',  (ep_ave_max_q / float(j+1))
 
                     break
             # print "FINISH"
