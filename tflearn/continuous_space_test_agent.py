@@ -21,11 +21,11 @@ MAX_EPISODES = 500000
 # Max episode length
 MAX_EP_STEPS = 1000
 # Base learning rate for the Actor network
-ACTOR_LEARNING_RATE = .01
+ACTOR_LEARNING_RATE = .001
 # Base learning rate for the Critic Network
-CRITIC_LEARNING_RATE = .1
+CRITIC_LEARNING_RATE = .0001
 # Discount factor
-GAMMA = 0.9
+GAMMA = 0.99
 # Soft target update param
 TAU = 0.001
 
@@ -43,7 +43,7 @@ SUMMARY_DIR = './results/tf_ddpg'
 RANDOM_SEED = 1234
 # Size of replay buffer
 BUFFER_SIZE = 100000
-MINIBATCH_SIZE = 2048
+MINIBATCH_SIZE = 256
 
 
 # ===========================
@@ -77,7 +77,7 @@ def main(_):
 
         state_dim = 13
         action_dim = 10
-        low_action_bound = np.array([-100., -180., -180., -180., 0., -180.])
+        low_action_bound = np.array([0., -180., -180., -180., 0., -180.])
         high_action_bound = np.array([100., 180., 180., 180., 100., 180.])
 
         actor = ActorNetwork(sess, state_dim, action_dim, low_action_bound, \
@@ -101,13 +101,14 @@ def main(_):
 
         for i in xrange(MAX_EPISODES):
 
-            ep_reward = 0
-            ep_ave_max_q = 0
+            ep_reward = 0.0
+            ep_ave_max_q = 0.0
 
             status = IN_GAME
             # Grab the state features from the environment
             s1 = hfo.getState()
             old_reward = 0
+            critic_loss = 0.0
             # print "********************"
             # print "Episode", i
             # print "********************"
@@ -125,17 +126,19 @@ def main(_):
                 a = actor.predict(s_noise)[0]
                 if replay_buffer.size() > MINIBATCH_SIZE:
                     index, a = actor.add_noise(a, max(0.0, EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL))
+                    for ind, item in enumerate(a[4:]):
+                        a[ind+4] = max(low_action_bound[ind], min(a[ind+4], high_action_bound[ind]))
                     # index = np.argmax(a[:4])
                 else:
                     # index = np.random.choice(4, 1000, p=a[:4])[0]
                     index = 0
-                    a[4] = np.random.uniform(-100, 100)
+                    a[4] = np.random.uniform(0, 100)
                     a[5] = np.random.uniform(-180, 180)
                     # print index
                 # a += np.random.rand(10)
                 # index = np.argmax(a[:4])
-                print a
-                print index
+                # print a
+                # print index
 
                 if index == 0:
                     action  = (DASH, a[4], a[5])
@@ -159,8 +162,8 @@ def main(_):
                 curr_goal_dist = np.sqrt((s1[3] - 1)**2 + (s1[4])**2)
                 curr_kickable = s[5]
 
-                print curr_ball_prox
-                print curr_goal_dist
+                # print curr_ball_prox
+                # print curr_goal_dist
 
                 r = 0
                 if j != 0:
@@ -181,7 +184,7 @@ def main(_):
 
                 # if r == 0:
                 #     r = -1
-                print "Current Reward", r
+                # print "Current Reward", r
 
 
                 replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r, \
@@ -193,7 +196,7 @@ def main(_):
                     s_batch, a_batch, r_batch, t_batch, s1_batch = \
                         replay_buffer.sample_batch(MINIBATCH_SIZE)
 
-                    print "REPLAY SIZE ", replay_buffer.size()
+                    # print "REPLAY SIZE ", replay_buffer.size()
 
                     # Calculate targets
                     # print s1_batch
@@ -211,10 +214,13 @@ def main(_):
                             y_i.append(r_batch[k] + GAMMA * target_q[k])
 
                     # Update the critic given the targets
-                    # predicted_q_value, _ = critic.train(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
-                    critic.train(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
+                    # print y_i
+                    # print predicted_q_value
+                    predicted_q_value, ep_critic_loss, _ = critic.train(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
+                    # predicted_q_value, ep_critic_loss = critic.getloss(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
 
-                    # ep_ave_max_q += np.amax(predicted_q_value)
+                    ep_ave_max_q += np.mean(predicted_q_value)
+                    critic_loss += np.mean(ep_critic_loss)
 
                     # Update the actor policy using the sampled gradient
                     a_outs = actor.predict(s_batch)
@@ -230,16 +236,21 @@ def main(_):
 
                 if terminal:
 
-                    summary_str = sess.run(summary_ops, feed_dict={
-                        summary_vars[0]: ep_reward,
-                        summary_vars[1]: ep_ave_max_q / float(j+1)
-                    })
+                    # summary_str = sess.run(summary_ops, feed_dict={
+                    #     summary_vars[0]: ep_reward,
+                    #     summary_vars[1]: ep_ave_max_q / float(j+1)
+                    # })
 
-                    writer.add_summary(summary_str, i)
-                    writer.flush()
+                    # writer.add_summary(summary_str, i)
+                    # writer.flush()
 
-                    print '| Reward: ' , float(ep_reward), " | Episode", i, \
-                        '| Qmax:',  (ep_ave_max_q / float(j+1))
+                    f = open('logs.txt', 'a')
+                    f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(j+1))+ "," + str(float(critic_loss)) + "\n")
+                    f.close()
+
+
+                    print('| Reward: ' , float(ep_reward), " | Episode", i, \
+                        '| Qmax:',  (ep_ave_max_q / float(j+1)), ' | Critic Loss: ', float(critic_loss))
 
                     break
             # print "FINISH"

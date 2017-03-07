@@ -60,7 +60,8 @@ class CriticNetwork(object):
         comparison = tf.less(tf.constant(0.0), params)
 
         # print comparison
-        self.action_grads =  tflearn.merge([choice, tf.select(comparison, pmax, pmin)], axis = 2, mode ='concat')
+        self.action_grads =  tflearn.merge([choice, tf.mul(params, tf.select(comparison, pmax, pmin))], axis = 2, mode ='concat')
+        print self.action_grads
 
 
     def create_critic_network(self):
@@ -84,12 +85,20 @@ class CriticNetwork(object):
         return inputs, action, out
 
     def train(self, inputs, action, predicted_q_value):
-        # return self.sess.run([self.out, self.optimize], feed_dict={
-        return self.sess.run(self.optimize, feed_dict={
+        return self.sess.run([self.out, self.loss, self.optimize], feed_dict={
+        # return self.sess.run(self.optimize, feed_dict={
             self.inputs: inputs,
             self.action: action,
             self.predicted_q_value: predicted_q_value
         })
+
+    # def getloss(self, inputs, action, predicted_q_value):
+    #     return self.sess.run([self.out,self.loss], feed_dict={
+    #     # return self.sess.run(self.optimize, feed_dict={
+    #         self.inputs: inputs,
+    #         self.action: action,
+    #         self.predicted_q_value: predicted_q_value
+    #     })
 
     def predict(self, inputs, action):
         return self.sess.run(self.out, feed_dict={

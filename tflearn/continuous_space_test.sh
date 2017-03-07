@@ -1,5 +1,5 @@
 #!/bin/bash
-./bin/HFO --offense-agents=1  --defense-npcs=1 --no-sync --fullstate &
+./bin/HFO --ball-x-min=.6 --ball-x-max=.8 --frames-per-trial=1000 --untouched-time=1000 --offense-agents=1  --defense-npcs=1 --headless --fullstate &
 sleep 5
 python ../DDPG/tflearn/continuous_space_test_agent.py 6000 &
 #python ~/git/DDPG/tflearn/continuous_space_test_agent.py 6000 &

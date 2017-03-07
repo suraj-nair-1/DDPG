@@ -111,7 +111,7 @@ class ActorNetwork(object):
             dWt = np.random.normal(0.0, 1.0)
             [theta, mu, sigma] = self.ou_noise_params[i]
             self.ou_noise[i] += theta * (mu - self.ou_noise[i]) * 1.0 + sigma * dWt
-        print "NOISE", self.ou_noise, "EPSILON", eps
+        # print "NOISE", self.ou_noise, "EPSILON", eps
 
         # Update continuous params
         for i in range(len(self.ou_noise)):
@@ -122,6 +122,13 @@ class ActorNetwork(object):
             # print "RANDOM AF &&&&&&&&&&&&&&&&&"
             acts = np.random.uniform(1, 10, 4)
             a[:4] = acts / np.sum(acts)
+            a[4] = np.random.uniform(0, 100)
+            a[5] = np.random.uniform(-180, 180)
+            a[6] = np.random.uniform(-180, 180)
+            a[7] = np.random.uniform(-180, 180)
+            a[8] = np.random.uniform(0, 100)
+            a[9] = np.random.uniform(-180, 180)
+
         index = np.argmax(a[:4])
 
         return index, a
