@@ -68,14 +68,14 @@ def main(_):
         hfo = HFOEnvironment()
         # Connect to the server with the specified
         # feature set. See feature sets in hfo.py/hfo.hpp.
-        hfo.connectToServer(HIGH_LEVEL_FEATURE_SET,
+        hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
                             'bin/teams/base/config/formations-dt', 6000,
                             'localhost', 'base_left', False)
 
         np.random.seed(RANDOM_SEED)
         tf.set_random_seed(RANDOM_SEED)
 
-        state_dim = 13
+        state_dim = 66
         action_dim = 10
         low_action_bound = np.array([0., -180., -180., -180., 0., -180.])
         high_action_bound = np.array([100., 180., 180., 180., 100., 180.])
@@ -158,14 +158,35 @@ def main(_):
                 # Get new state s_(t+1)
                 s1 = hfo.getState()
 
-                curr_ball_prox = 1 - 2*(np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[1])**2) / np.sqrt(20))
-                curr_goal_dist = np.sqrt((s1[3] - 1)**2 + (s1[4])**2)
-                curr_kickable = s[5]
+                # curr_ball_prox = 1 - 2*(np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[1])**2) / np.sqrt(20))
+                # curr_goal_dist = np.sqrt((s1[3] - 1)**2 + (s1[4])**2)
+                # curr_kickable = s[5]
+
+                curr_ball_prox = s1[53]
+                curr_kickable = s1[12]
+
+                goal_proximity = s1[15]
+                ball_dist = 1.0 - curr_ball_prox
+                goal_dist = 1.0 - goal_proximity
+                ball_ang_sin_rad = s1[51]
+                ball_ang_cos_rad = s1[52]
+                ball_ang_rad = np.arccos(ball_ang_cos_rad)
+                if ball_ang_sin_rad < 0:
+                    ball_ang_rad *= -1.
+                goal_ang_sin_rad = s1[13]
+                goal_ang_cos_rad = s1[14]
+                goal_ang_rad = np.arccos(goal_ang_cos_rad)
+                if goal_ang_sin_rad < 0:
+                    goal_ang_rad *= -1.
+                alpha = max(ball_ang_rad, goal_ang_rad) - min(ball_ang_rad, goal_ang_rad)
+                # Law of Cosines
+                curr_goal_dist = np.sqrt(ball_dist*ball_dist + goal_dist*goal_dist - 2.*ball_dist*goal_dist*np.cos(alpha))
+
 
                 # print curr_ball_prox
                 # print curr_goal_dist
 
-                r = 0
+                r = 0.0
                 if j != 0:
                     # If game has finished, calculate reward based on whether or not a goal was scored
                     if terminal != IN_GAME:
@@ -174,7 +195,7 @@ def main(_):
 
                     # Else calculate reward as distance between ball and goal
                     r += curr_ball_prox - old_ball_prox
-                    r += 0.6 * -(curr_goal_dist - old_goal_dist)
+                    r += 0.2 * -(curr_goal_dist - old_goal_dist)
                     if (not old_kickable) and (curr_kickable):
                         r += 1
 
@@ -244,8 +265,8 @@ def main(_):
                     # writer.add_summary(summary_str, i)
                     # writer.flush()
 
-                    f = open('logs.txt', 'a')
-                    f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(j+1))+ "," + str(float(critic_loss)) + "\n")
+                    f = open('logs2.txt', 'a')
+                    f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(j+1))+ "," + str(float(critic_loss)) + "," +  str(EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL) + "\n")
                     f.close()
 
 

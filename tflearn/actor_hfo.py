@@ -111,7 +111,11 @@ class ActorNetwork(object):
             dWt = np.random.normal(0.0, 1.0)
             [theta, mu, sigma] = self.ou_noise_params[i]
             self.ou_noise[i] += theta * (mu - self.ou_noise[i]) * 1.0 + sigma * dWt
-        # print "NOISE", self.ou_noise, "EPSILON", eps
+        # print "NOISE", self.ou_noise, "EPSILON", eps'
+        if np.random.uniform() < 0.01:
+            f = open('noiselogs.txt', 'a')
+            f.write(str(self.ou_noise)[1:-1] + "\n")
+            f.close()
 
         # Update continuous params
         for i in range(len(self.ou_noise)):
