@@ -12,7 +12,7 @@ class ActorNetwork(object):
     The output layer activation is a tanh to keep the action
     between -2 and 2
     """
-    def __init__(self, sess, state_dim, action_dim, low_action_bound, high_action_bound, learning_rate, tau, ou_noise_params):
+    def __init__(self, sess, state_dim, action_dim, low_action_bound, high_action_bound, learning_rate, tau, LOGPATH):
         self.sess = sess
         self.s_dim = state_dim
         self.a_dim = action_dim
@@ -20,8 +20,9 @@ class ActorNetwork(object):
         self.high_action_bound = high_action_bound
         self.learning_rate = learning_rate
         self.tau = tau
-        self.ou_noise_params = ou_noise_params
-        self.ou_noise = [r[1] for r in self.ou_noise_params]
+        self.LOGPATH = LOGPATH
+        # self.ou_noise_params = ou_noise_params
+        # self.ou_noise = [r[1] for r in self.ou_noise_params]
 
         # Actor Network
         self.inputs, self.out, self.scaled_out = self.create_actor_network()
@@ -35,8 +36,8 @@ class ActorNetwork(object):
 
         # Op for periodically updating target network with online network weights
         self.update_target_network_params = \
-            [self.target_network_params[i].assign(tf.mul(self.network_params[i], self.tau) + \
-                tf.mul(self.target_network_params[i], 1. - self.tau))
+            [self.target_network_params[i].assign(tf.multiply(self.network_params[i], self.tau) + \
+                tf.multiply(self.target_network_params[i], 1. - self.tau))
                 for i in range(len(self.target_network_params))]
 
         # This gradient will be provided by the critic network
@@ -65,7 +66,7 @@ class ActorNetwork(object):
         # print params
         choice_probs = tflearn.activations.softmax(choice)
         # print choice_probs
-        params2 = tf.mul(tf.div(params + 1, 2), self.high_action_bound - self.low_action_bound) + self.low_action_bound
+        params2 = tf.multiply(tf.divide(params + 1, 2), self.high_action_bound - self.low_action_bound) + self.low_action_bound
         # print tf.concat([tflearn.activations.sigmoid(choice), \
         #     tf.mul(params, self.high_action_bound - self.low_action_bound) + self.low_action_bound], 0)
         # print "***************"
@@ -105,7 +106,9 @@ class ActorNetwork(object):
     def get_num_trainable_vars(self):
         return self.num_trainable_vars
 
-    def add_noise(self, a, eps):
+    def add_noise(self, a, eps, ou_noise_params):
+        self.ou_noise_params = ou_noise_params
+        self.ou_noise = [r[1] for r in self.ou_noise_params]
         # Update OU noise for continuous params
         for i in range(len(self.ou_noise)):
             dWt = np.random.normal(0.0, 1.0)
@@ -113,7 +116,7 @@ class ActorNetwork(object):
             self.ou_noise[i] += theta * (mu - self.ou_noise[i]) * 1.0 + sigma * dWt
         # print "NOISE", self.ou_noise, "EPSILON", eps'
         if np.random.uniform() < 0.01:
-            f = open('noiselogs.txt', 'a')
+            f = open(self.LOGPATH + 'noiselogs.txt', 'a')
             f.write(str(self.ou_noise)[1:-1] + "\n")
             f.close()
 

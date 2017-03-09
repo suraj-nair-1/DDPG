@@ -28,7 +28,7 @@ class CriticNetwork(object):
 
         # Op for periodically updating target network with online network weights with regularization
         self.update_target_network_params = \
-            [self.target_network_params[i].assign(tf.mul(self.network_params[i], self.tau) + tf.mul(self.target_network_params[i], 1. - self.tau))
+            [self.target_network_params[i].assign(tf.multiply(self.network_params[i], self.tau) + tf.multiply(self.target_network_params[i], 1. - self.tau))
                 for i in range(len(self.target_network_params))]
 
         # Network target (y_i)
@@ -60,7 +60,7 @@ class CriticNetwork(object):
         comparison = tf.less(tf.constant(0.0), params)
 
         # print comparison
-        self.action_grads =  tflearn.merge([choice, tf.mul(params, tf.select(comparison, pmax, pmin))], axis = 2, mode ='concat')
+        self.action_grads =  tflearn.merge([choice, tf.multiply(params, tf.where(comparison, pmax, pmin))], axis = 2, mode ='concat')
         print self.action_grads
 
 

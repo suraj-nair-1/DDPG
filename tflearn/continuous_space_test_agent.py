@@ -16,10 +16,13 @@ from actor_hfo import ActorNetwork
 from critic_hfo import CriticNetwork
 
 
+# LOGPATH = "../DDPG/logging/"
+LOGPATH = "/home/snair/logging/"
+
 # Max training steps
 MAX_EPISODES = 500000
 # Max episode length
-MAX_EP_STEPS = 1000
+MAX_EP_STEPS = 2000
 # Base learning rate for the Actor network
 ACTOR_LEARNING_RATE = .001
 # Base learning rate for the Critic Network
@@ -81,7 +84,7 @@ def main(_):
         high_action_bound = np.array([100., 180., 180., 180., 100., 180.])
 
         actor = ActorNetwork(sess, state_dim, action_dim, low_action_bound, \
-            high_action_bound, ACTOR_LEARNING_RATE, TAU, OU_NOISE_PARAMS)
+            high_action_bound, ACTOR_LEARNING_RATE, TAU, LOGPATH)
 
         critic = CriticNetwork(sess, state_dim, action_dim, low_action_bound, high_action_bound, \
             CRITIC_LEARNING_RATE, TAU, actor.get_num_trainable_vars(), MINIBATCH_SIZE)
@@ -103,6 +106,7 @@ def main(_):
 
             ep_reward = 0.0
             ep_ave_max_q = 0.0
+            OU_NOISE_PARAMS = [[.1, 0.0, max(0.0, EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL)]] * 6
 
             status = IN_GAME
             # Grab the state features from the environment
@@ -125,7 +129,7 @@ def main(_):
                 # print s_noise
                 a = actor.predict(s_noise)[0]
                 if replay_buffer.size() > MINIBATCH_SIZE:
-                    index, a = actor.add_noise(a, max(0.0, EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL))
+                    index, a = actor.add_noise(a, max(0.0, EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL), OU_NOISE_PARAMS)
                     for ind, item in enumerate(a[4:]):
                         a[ind+4] = max(low_action_bound[ind], min(a[ind+4], high_action_bound[ind]))
                     # index = np.argmax(a[:4])
@@ -265,7 +269,7 @@ def main(_):
                     # writer.add_summary(summary_str, i)
                     # writer.flush()
 
-                    f = open('logs2.txt', 'a')
+                    f = open(LOGPATH +'logs2.txt', 'a')
                     f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(j+1))+ "," + str(float(critic_loss)) + "," +  str(EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL) + "\n")
                     f.close()
 
