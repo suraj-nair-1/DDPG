@@ -81,7 +81,7 @@ def main(_):
         high_action_bound = np.array([100., 180., 180., 180., 100., 180.])
 
         actor = ActorNetwork(sess, state_dim, action_dim, low_action_bound, \
-            high_action_bound, ACTOR_LEARNING_RATE, TAU, OU_NOISE_PARAMS)
+            high_action_bound, ACTOR_LEARNING_RATE, TAU)
 
         critic = CriticNetwork(sess, state_dim, action_dim, low_action_bound, high_action_bound, \
             CRITIC_LEARNING_RATE, TAU, actor.get_num_trainable_vars(), MINIBATCH_SIZE)
