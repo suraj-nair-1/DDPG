@@ -60,7 +60,7 @@ class CriticNetwork(object):
         comparison = tf.less(tf.constant(0.0), params)
 
         # print comparison
-        self.action_grads =  tflearn.merge([choice, tf.multiply(params, tf.select(comparison, pmax, pmin))], axis = 2, mode ='concat')
+        self.action_grads =  tflearn.merge([choice, tf.multiply(params, tf.where(comparison, pmax, pmin))], axis = 2, mode ='concat')
         print self.action_grads
 
 

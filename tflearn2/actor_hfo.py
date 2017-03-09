@@ -20,8 +20,8 @@ class ActorNetwork(object):
         self.high_action_bound = high_action_bound
         self.learning_rate = learning_rate
         self.tau = tau
-        self.ou_noise_params = ou_noise_params
-        self.ou_noise = [r[1] for r in self.ou_noise_params]
+        # self.ou_noise_params = ou_noise_params
+        # self.ou_noise = [r[1] for r in self.ou_noise_params]
 
         # Actor Network
         self.inputs, self.out, self.scaled_out = self.create_actor_network()
@@ -105,7 +105,9 @@ class ActorNetwork(object):
     def get_num_trainable_vars(self):
         return self.num_trainable_vars
 
-    def add_noise(self, a, eps):
+    def add_noise(self, a, eps, ou_noise_params):
+        self.ou_noise_params = ou_noise_params
+        self.ou_noise = [r[1] for r in self.ou_noise_params]
         # Update OU noise for continuous params
         for i in range(len(self.ou_noise)):
             dWt = np.random.normal(0.0, 1.0)
