@@ -35,6 +35,9 @@ TAU = 0.001
 # Noise for exploration
 EPS_GREEDY_INIT = 1.0
 EPS_EPISODES_ANNEAL = 1000
+
+sigma = 1.0
+sigma_ep_anneal = 10000
 # Parameters in format of theta-mu-sigma
 # OU_NOISE_PARAMS = [[5.0, 0.0, 3.0], [5.0, 0.0, 3.0], [5.0, 0.0, 3.0],
 #                    [5.0, 0.0, 3.0], [5.0, 0.0, 3.0], [5.0, 0.0, 3.0]]
@@ -45,8 +48,8 @@ OU_NOISE_PARAMS = [[.1, 0.0, 3.0]] * 6
 SUMMARY_DIR = './results/tf_ddpg'
 RANDOM_SEED = 1234
 # Size of replay buffer
-BUFFER_SIZE = 100000
-MINIBATCH_SIZE = 256
+BUFFER_SIZE = 10000
+MINIBATCH_SIZE = 1024
 
 
 # ===========================
@@ -106,7 +109,7 @@ def main(_):
 
             ep_reward = 0.0
             ep_ave_max_q = 0.0
-            OU_NOISE_PARAMS = [[.1, 0.0, max(0.0, EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL)]] * 6
+            OU_NOISE_PARAMS = [[.1, 0.0, max(0.0, sigma - float(i) / sigma_ep_anneal)]] * 6
 
             status = IN_GAME
             # Grab the state features from the environment
@@ -129,7 +132,7 @@ def main(_):
                 # print s_noise
                 a = actor.predict(s_noise)[0]
                 if replay_buffer.size() > MINIBATCH_SIZE:
-                    index, a = actor.add_noise(a, max(0.0, EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL), OU_NOISE_PARAMS)
+                    index, a = actor.add_noise(a, max(0.01, EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL), OU_NOISE_PARAMS)
                     for ind, item in enumerate(a[4:]):
                         a[ind+4] = max(low_action_bound[ind], min(a[ind+4], high_action_bound[ind]))
                     # index = np.argmax(a[:4])
@@ -269,13 +272,13 @@ def main(_):
                     # writer.add_summary(summary_str, i)
                     # writer.flush()
 
-                    f = open(LOGPATH +'logs2.txt', 'a')
-                    f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(j+1))+ "," + str(float(critic_loss)) + "," +  str(EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL) + "\n")
+                    f = open(LOGPATH +'logs3.txt', 'a')
+                    f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(j+1))+ "," + str(float(critic_loss)/ float(j+1)) + "," +  str(EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL) + "\n")
                     f.close()
 
 
                     print('| Reward: ' , float(ep_reward), " | Episode", i, \
-                        '| Qmax:',  (ep_ave_max_q / float(j+1)), ' | Critic Loss: ', float(critic_loss))
+                        '| Qmax:',  (ep_ave_max_q / float(j+1)), ' | Critic Loss: ', float(critic_loss)/ float(j+1))
 
                     break
             # print "FINISH"
