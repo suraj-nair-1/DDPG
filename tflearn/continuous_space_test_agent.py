@@ -22,7 +22,7 @@ LOGPATH = "/cs/ml/ddpgHFO/DDPG/logging/"
 # Max training steps
 MAX_EPISODES = 500000
 # Max episode length
-MAX_EP_STEPS = 2000
+MAX_EP_STEPS = 1000
 # Base learning rate for the Actor network
 ACTOR_LEARNING_RATE = .001
 # Base learning rate for the Critic Network
@@ -37,7 +37,7 @@ EPS_GREEDY_INIT = 1.0
 EPS_EPISODES_ANNEAL = 1000
 
 sigma = 1.0
-sigma_ep_anneal = 2000
+sigma_ep_anneal = 1500
 # Parameters in format of theta-mu-sigma
 # OU_NOISE_PARAMS = [[5.0, 0.0, 3.0], [5.0, 0.0, 3.0], [5.0, 0.0, 3.0],
 #                    [5.0, 0.0, 3.0], [5.0, 0.0, 3.0], [5.0, 0.0, 3.0]]
