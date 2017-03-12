@@ -17,7 +17,7 @@ from critic_hfo import CriticNetwork
 
 
 # LOGPATH = "../DDPG/logging/"
-LOGPATH = "/home/snair/logging/"
+LOGPATH = "/cs/ml/ddpgHFO/HFO/log/"
 
 # Max training steps
 MAX_EPISODES = 500000
@@ -37,18 +37,18 @@ EPS_GREEDY_INIT = 1.0
 EPS_EPISODES_ANNEAL = 1000
 
 sigma = 1.0
-sigma_ep_anneal = 10000
+sigma_ep_anneal = 2000
 # Parameters in format of theta-mu-sigma
 # OU_NOISE_PARAMS = [[5.0, 0.0, 3.0], [5.0, 0.0, 3.0], [5.0, 0.0, 3.0],
 #                    [5.0, 0.0, 3.0], [5.0, 0.0, 3.0], [5.0, 0.0, 3.0]]
 
-OU_NOISE_PARAMS = [[.1, 0.0, 3.0]] * 6
+# OU_NOISE_PARAMS = [[.1, 0.0, 3.0]] * 6
 
 # Directory for storing tensorboard summary results
 SUMMARY_DIR = './results/tf_ddpg'
 RANDOM_SEED = 1234
 # Size of replay buffer
-BUFFER_SIZE = 10000
+BUFFER_SIZE = 500000
 MINIBATCH_SIZE = 1024
 
 
@@ -272,7 +272,7 @@ def main(_):
                     # writer.add_summary(summary_str, i)
                     # writer.flush()
 
-                    f = open(LOGPATH +'logs4.txt', 'a')
+                    f = open(LOGPATH +'logs5.txt', 'a')
                     f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(j+1))+ "," + str(float(critic_loss)/ float(j+1)) + "," +  str(EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL) + "\n")
                     f.close()
 

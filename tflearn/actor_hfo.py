@@ -116,7 +116,7 @@ class ActorNetwork(object):
             self.ou_noise[i] += theta * (mu - self.ou_noise[i]) * 1.0 + sigma * dWt
         # print "NOISE", self.ou_noise, "EPSILON", eps'
         if np.random.uniform() < 0.01:
-            f = open(self.LOGPATH + 'noiselogs3.txt', 'a')
+            f = open(self.LOGPATH + 'noiselogs4.txt', 'a')
             f.write(str(self.ou_noise)[1:-1] + "\n")
             f.close()
 
