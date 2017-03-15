@@ -55,16 +55,16 @@ MINIBATCH_SIZE = 1024
 # ===========================
 #   Tensorflow Summary Ops
 # ===========================
-def build_summaries():
-    episode_reward = tf.Variable(0.)
-    tf.summary.scalar("Reward", episode_reward)
-    episode_ave_max_q = tf.Variable(0.)
-    tf.summary.scalar("Qmax Value", episode_ave_max_q)
+# def build_summaries():
+#     episode_reward = tf.Variable(0.)
+#     tf.summary.scalar("Reward", episode_reward)
+#     episode_ave_max_q = tf.Variable(0.)
+#     tf.summary.scalar("Qmax Value", episode_ave_max_q)
 
-    summary_vars = [episode_reward, episode_ave_max_q]
-    summary_ops = tf.summary.merge_all()
+#     summary_vars = [episode_reward, episode_ave_max_q]
+#     summary_ops = tf.summary.merge_all()
 
-    return summary_ops, summary_vars
+#     return summary_ops, summary_vars
 
 
 def main(_):
@@ -95,10 +95,10 @@ def main(_):
                 CRITIC_LEARNING_RATE, TAU, actor.get_num_trainable_vars(), MINIBATCH_SIZE)
 
             # Set up summary Ops
-            summary_ops, summary_vars = build_summaries()
+            # summary_ops, summary_vars = build_summaries()
 
             sess.run(tf.global_variables_initializer())
-            writer = tf.summary.FileWriter(SUMMARY_DIR, sess.graph)
+            # writer = tf.summary.FileWriter(SUMMARY_DIR, sess.graph)
 
             # Initialize target network weights
             actor.update_target_network()
