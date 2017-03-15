@@ -49,7 +49,7 @@ SUMMARY_DIR = './results/tf_ddpg'
 RANDOM_SEED = 1234
 # Size of replay buffer
 BUFFER_SIZE = 1000000
-MINIBATCH_SIZE = 128
+MINIBATCH_SIZE = 1024
 
 
 # ===========================
