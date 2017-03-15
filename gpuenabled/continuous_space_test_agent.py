@@ -274,7 +274,7 @@ def main(_):
                         # writer.add_summary(summary_str, i)
                         # writer.flush()
 
-                        f = open(LOGPATH +'logs6.txt', 'a')
+                        f = open(LOGPATH +'logs7.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(j+1))+ "," + str(float(critic_loss)/ float(j+1)) + "," +  str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + "\n")
                         f.close()
 
