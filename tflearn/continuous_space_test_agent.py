@@ -16,8 +16,8 @@ from actor_hfo import ActorNetwork
 from critic_hfo import CriticNetwork
 
 
-LOGPATH = "../DDPG/logging/"
-# LOGPATH = "/cs/ml/ddpgHFO/DDPG/logging/"
+# LOGPATH = "../DDPG/logging/"
+LOGPATH = "/cs/ml/ddpgHFO/DDPG/logging/"
 
 # Max training steps
 MAX_EPISODES = 500000
