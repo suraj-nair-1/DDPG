@@ -46,43 +46,63 @@ class CriticNetwork(object):
         n2 = tf.div(tf.gradients(self.out, self.action), tf.constant(MINIBATCH_SIZE, dtype=tf.float32))
         # print n2
         # print self.action
-        choice = tf.slice(n2, [0,0,0], [-1, -1, 4])
-        params = tf.slice(n2, [0,0,4], [-1, -1, 6])
+        choice_grad = tf.slice(n2, [0,0,0], [-1, -1, 4])
+        params_grad = tf.slice(n2, [0,0,4], [-1, -1, 6])
+        params = tf.reshape(tf.slice(self.action, [0,4], [-1, 6]), [1, -1, 6])
+
 
         high = tf.constant([[high_act_bound.tolist()]*MINIBATCH_SIZE])
         # print high
+        # print params
         low = tf.constant([[low_act_bound.tolist()]*MINIBATCH_SIZE])
         # print high - params
         pmax = tf.div((high - params), (high - low))
         pmin = tf.div((params - low), (high - low))
         # print pmax
 
-        comparison = tf.less(tf.constant(0.0), params)
+        comparison = tf.less(tf.constant(0.0), params_grad)
 
         # print comparison
-        self.action_grads =  tflearn.merge([choice, tf.multiply(params, tf.where(comparison, pmax, pmin))], axis = 2, mode ='concat')
-        print self.action_grads
+        # print comparison
+        # print pmax
+        self.action_grads =  tflearn.merge([choice_grad, tf.multiply(params_grad, tf.where(comparison, pmax, pmin))], axis = 2, mode ='concat')
+        # print self.action_grads
 
 
     def create_critic_network(self):
         inputs = tflearn.input_data(shape=[None, self.s_dim])
         action = tflearn.input_data(shape=[None, self.a_dim])
-        net = tflearn.fully_connected(inputs, 400, activation='relu')
+        in1 = tflearn.merge([inputs, action], 'concat')
+
+        l = tflearn.fully_connected(in1, 1024)
+        la = tflearn.activations.leaky_relu(l, alpha=-.01)
+        l2 = tflearn.fully_connected(la, 512)
+        l2a = tflearn.activations.leaky_relu(l2, alpha=-.01)
+        l3 = tflearn.fully_connected(l2a, 256)
+        l3a = tflearn.activations.leaky_relu(l3, alpha=-.01)
+        l4 = tflearn.fully_connected(l3a, 128)
+        l4a = tflearn.activations.leaky_relu(l4, alpha=-.01)
+        w_init = tflearn.initializations.normal(stddev = -0.01)
+        out = tflearn.fully_connected(l4a, 1, weights_init=w_init)
+
+        return inputs, action, out
+
+        # net = tflearn.fully_connected(inputs, 400, activation='relu')
 
         # Add the action tensor in the 2nd hidden layer
         # Use two temp layers to get the corresponding weights and biases
-        t1 = tflearn.fully_connected(net, 300)
-        t2 = tflearn.fully_connected(action, 300)
+        # t1 = tflearn.fully_connected(net, 300)
+        # t2 = tflearn.fully_connected(action, 300)
 
         # net2 = tflearn.activation(tf.matmul(net,t1.W) + tf.matmul(action, t2.W) + t2.b, activation='relu')
-        net2 = tflearn.activation(tflearn.merge([tf.matmul(net,t1.W), tf.matmul(action, t2.W)], 'concat'), activation='relu')
+        # net2 = tflearn.activation(tflearn.merge([tf.matmul(net,t1.W), tf.matmul(action, t2.W)], 'concat'), activation='relu')
         # tflearn.merge([inputs, action], 'concat')
 
         # linear layer connected to 1 output representing Q(s,a)
         # Weights are init to Uniform[-3e-3, 3e-3]
-        w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
-        out = tflearn.fully_connected(net2, 1, weights_init=w_init)
-        return inputs, action, out
+        # w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
+        # out = tflearn.fully_connected(net2, 1, weights_init=w_init)
+        # return inputs, action, out
 
     def train(self, inputs, action, predicted_q_value):
         return self.sess.run([self.out, self.loss, self.optimize], feed_dict={

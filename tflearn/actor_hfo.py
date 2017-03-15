@@ -54,19 +54,22 @@ class ActorNetwork(object):
 
     def create_actor_network(self):
         inputs = tflearn.input_data(shape=[None, self.s_dim])
-        net = tflearn.fully_connected(inputs, 400, activation='relu')
-        net2 = tflearn.fully_connected(net, 300, activation='relu')
-        # TODO: Final layer weights need to be initted to their ranges
-        w_init = tflearn.initializations.uniform(minval=-.003, maxval=.003)
-        out = tflearn.fully_connected(net2, self.a_dim, activation='tanh', weights_init=w_init)
-        # print out
-        choice = tf.slice(out, [0,0], [-1, 4])
-        params = tf.slice(out, [0,4], [-1, 6])
-        # print choice
-        # print params
-        choice_probs = tflearn.activations.softmax(choice)
-        # print choice_probs
-        params2 = tf.multiply(tf.divide(params + 1, 2), self.high_action_bound - self.low_action_bound) + self.low_action_bound
+        l = tflearn.fully_connected(inputs, 1024)
+        la = tflearn.activations.leaky_relu(l, alpha=-.01)
+        l2 = tflearn.fully_connected(la, 512)
+        l2a = tflearn.activations.leaky_relu(l2, alpha=-.01)
+        l3 = tflearn.fully_connected(l2a, 256)
+        l3a = tflearn.activations.leaky_relu(l3, alpha=-.01)
+        l4 = tflearn.fully_connected(l3a, 128)
+        l4a = tflearn.activations.leaky_relu(l4, alpha=-.01)
+        w_init = tflearn.initializations.normal(stddev = -0.01)
+        out = tflearn.fully_connected(l4a, self.a_dim, weights_init=w_init)
+
+        # choice = tf.slice(out, [0,0], [-1, 4])
+        # params = tf.slice(out, [0,4], [-1, 6])
+        # choice_probs = tflearn.activations.softmax(choice)
+
+        # params2 = tf.multiply(tf.divide(params + 1, 2), self.high_action_bound - self.low_action_bound) + self.low_action_bound
         # print tf.concat([tflearn.activations.sigmoid(choice), \
         #     tf.mul(params, self.high_action_bound - self.low_action_bound) + self.low_action_bound], 0)
         # print "***************"
@@ -74,14 +77,14 @@ class ActorNetwork(object):
         # print params2
         # print params2
         # print choice_probs
-        scaled_out = tflearn.merge([choice_probs, params2], 'concat')
+        # scaled_out = tflearn.merge([choice_probs, params2], 'concat')
         # scaled_out = tf.concat(0, [choice_probs, params])
         # print scaled_out
 
         # Scale output to low_action_bound to high_action_bound
         # scaled_out = tf.div(out, tf.reduce_sum(out))
         # scaled_out = tf.mul(out, self.high_action_bound - self.low_action_bound) + self.low_action_bound
-        return inputs, out, scaled_out
+        return inputs, out, out
 
     def train(self, inputs, a_gradient):
         self.sess.run(self.optimize, feed_dict={
@@ -106,25 +109,26 @@ class ActorNetwork(object):
     def get_num_trainable_vars(self):
         return self.num_trainable_vars
 
-    def add_noise(self, a, eps, ou_noise_params):
-        self.ou_noise_params = ou_noise_params
-        self.ou_noise = [r[1] for r in self.ou_noise_params]
+    def add_noise(self, a, eps):
+        # self.ou_noise_params = ou_noise_params
+        # self.ou_noise = [r[1] for r in self.ou_noise_params]
         # Update OU noise for continuous params
-        for i in range(len(self.ou_noise)):
-            dWt = np.random.normal(0.0, 1.0)
-            [theta, mu, sigma] = self.ou_noise_params[i]
-            self.ou_noise[i] += theta * (mu - self.ou_noise[i]) * 1.0 + sigma * dWt
+        # for i in range(len(self.ou_noise)):
+        #     dWt = np.random.normal(0.0, 1.0)
+        #     [theta, mu, sigma] = self.ou_noise_params[i]
+        #     self.ou_noise[i] += theta * (mu - self.ou_noise[i]) * 1.0 + sigma * dWt
         # print "NOISE", self.ou_noise, "EPSILON", eps'
-        if np.random.uniform() < 0.01:
-            f = open(self.LOGPATH + 'noiselogs4.txt', 'a')
-            f.write(str(self.ou_noise)[1:-1] + "\n")
-            f.close()
+        # if np.random.uniform() < 0.01:
+        #     f = open(self.LOGPATH + 'noiselogs4.txt', 'a')
+        #     f.write(str(self.ou_noise)[1:-1] + "\n")
+        #     f.close()
 
         # Update continuous params
-        for i in range(len(self.ou_noise)):
-            a[4 + i] += self.ou_noise[i]
+        # for i in range(len(self.ou_noise)):
+        #     a[4 + i] += self.ou_noise[i]
 
         # With probability epsilon, set all discrete actions to be equally likely
+
         if np.random.random_sample() <= eps:
             # print "RANDOM AF &&&&&&&&&&&&&&&&&"
             acts = np.random.uniform(1, 10, 4)
@@ -135,6 +139,8 @@ class ActorNetwork(object):
             a[7] = np.random.uniform(-180, 180)
             a[8] = np.random.uniform(0, 100)
             a[9] = np.random.uniform(-180, 180)
+        else:
+            print a
 
         index = np.argmax(a[:4])
 

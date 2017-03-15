@@ -16,13 +16,13 @@ from actor_hfo import ActorNetwork
 from critic_hfo import CriticNetwork
 
 
-# LOGPATH = "../DDPG/logging/"
-LOGPATH = "/cs/ml/ddpgHFO/DDPG/logging/"
+LOGPATH = "../DDPG/logging/"
+# LOGPATH = "/cs/ml/ddpgHFO/DDPG/logging/"
 
 # Max training steps
 MAX_EPISODES = 500000
 # Max episode length
-MAX_EP_STEPS = 2000
+MAX_EP_STEPS = 500
 # Base learning rate for the Actor network
 ACTOR_LEARNING_RATE = .001
 # Base learning rate for the Critic Network
@@ -30,14 +30,14 @@ CRITIC_LEARNING_RATE = .001
 # Discount factor
 GAMMA = 0.99
 # Soft target update param
-TAU = 0.001
+TAU = 0.0001
 
 # Noise for exploration
 EPS_GREEDY_INIT = 1.0
-EPS_EPISODES_ANNEAL = 1000
+EPS_ITERATIONS_ANNEAL = 10000
 
-sigma = 1.0
-sigma_ep_anneal = 2000
+# sigma = 1.0
+# sigma_ep_anneal = 2000
 # Parameters in format of theta-mu-sigma
 # OU_NOISE_PARAMS = [[5.0, 0.0, 3.0], [5.0, 0.0, 3.0], [5.0, 0.0, 3.0],
 #                    [5.0, 0.0, 3.0], [5.0, 0.0, 3.0], [5.0, 0.0, 3.0]]
@@ -48,8 +48,8 @@ sigma_ep_anneal = 2000
 SUMMARY_DIR = './results/tf_ddpg'
 RANDOM_SEED = 1234
 # Size of replay buffer
-BUFFER_SIZE = 500000
-MINIBATCH_SIZE = 1024
+BUFFER_SIZE = 1000000
+MINIBATCH_SIZE = 128
 
 
 # ===========================
@@ -69,6 +69,7 @@ def build_summaries():
 
 def main(_):
     with tf.Session() as sess:
+        ITERATIONS = 0.0
 
         # Create the HFO Environment
         hfo = HFOEnvironment()
@@ -81,7 +82,7 @@ def main(_):
         np.random.seed(RANDOM_SEED)
         tf.set_random_seed(RANDOM_SEED)
 
-        state_dim = 66
+        state_dim = 58
         action_dim = 10
         low_action_bound = np.array([0., -180., -180., -180., 0., -180.])
         high_action_bound = np.array([100., 180., 180., 180., 100., 180.])
@@ -109,7 +110,7 @@ def main(_):
 
             ep_reward = 0.0
             ep_ave_max_q = 0.0
-            OU_NOISE_PARAMS = [[.1, 0.0, max(0.0, sigma - float(i) / sigma_ep_anneal)]] * 6
+            # OU_NOISE_PARAMS = [[.1, 0.0, max(0.0, sigma - float(i) / sigma_ep_anneal)]] * 6
 
             status = IN_GAME
             # Grab the state features from the environment
@@ -131,16 +132,16 @@ def main(_):
                 s_noise = np.reshape(s, (1, state_dim)) #+ np.random.rand(1, 19)
                 # print s_noise
                 a = actor.predict(s_noise)[0]
-                if replay_buffer.size() > MINIBATCH_SIZE:
-                    index, a = actor.add_noise(a, max(0.01, EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL), OU_NOISE_PARAMS)
-                    for ind, item in enumerate(a[4:]):
-                        a[ind+4] = max(low_action_bound[ind], min(a[ind+4], high_action_bound[ind]))
+                # if replay_buffer.size() > MINIBATCH_SIZE:
+                index, a = actor.add_noise(a, max(0.1, EPS_GREEDY_INIT - ITERATIONS / EPS_ITERATIONS_ANNEAL))
+                    # for ind, item in enumerate(a[4:]):
+                    #     a[ind+4] = max(low_action_bound[ind], min(a[ind+4], high_action_bound[ind]))
                     # index = np.argmax(a[:4])
-                else:
-                    # index = np.random.choice(4, 1000, p=a[:4])[0]
-                    index = 0
-                    a[4] = np.random.uniform(0, 100)
-                    a[5] = np.random.uniform(-180, 180)
+                # else:
+                #     index = np.random.choice(4, 1000, p=a[:4])[0]
+                    # index = 0
+                    # a[4] = np.random.uniform(0, 100)
+                    # a[5] = np.random.uniform(-180, 180)
                     # print index
                 # a += np.random.rand(10)
                 # index = np.argmax(a[:4])
@@ -202,7 +203,7 @@ def main(_):
 
                     # Else calculate reward as distance between ball and goal
                     r += curr_ball_prox - old_ball_prox
-                    r += 0.2 * -(curr_goal_dist - old_goal_dist)
+                    r += -3.0 * (curr_goal_dist - old_goal_dist)
                     if (not old_kickable) and (curr_kickable):
                         r += 1
 
@@ -259,7 +260,7 @@ def main(_):
                     actor.update_target_network()
                     critic.update_target_network()
                     # break
-
+                ITERATIONS += 1
                 ep_reward += r
 
                 if terminal:
@@ -272,8 +273,8 @@ def main(_):
                     # writer.add_summary(summary_str, i)
                     # writer.flush()
 
-                    f = open(LOGPATH +'logs5.txt', 'a')
-                    f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(j+1))+ "," + str(float(critic_loss)/ float(j+1)) + "," +  str(EPS_GREEDY_INIT - float(i) / EPS_EPISODES_ANNEAL) + "\n")
+                    f = open(LOGPATH +'logs6.txt', 'a')
+                    f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(j+1))+ "," + str(float(critic_loss)/ float(j+1)) + "," +  str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + "\n")
                     f.close()
 
 
