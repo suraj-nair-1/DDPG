@@ -1,7 +1,7 @@
 #!/bin/bash
 ./bin/HFO --frames-per-trial=500 --untouched-time=500 --offense-agents=1 --headless --fullstate &
 sleep 5
-python ../DDPG/gpuenabled/continuous_space_test_agent.py 6000 &
+python ../DDPG/gpuenabled/continuous_space_test_agent.py 4200 &
 #python ~/git/DDPG/tflearn/continuous_space_test_agent.py 6000 &
 
 # sleep 5
