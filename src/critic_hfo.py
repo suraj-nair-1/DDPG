@@ -87,22 +87,6 @@ class CriticNetwork(object):
 
         return inputs, action, out
 
-        # net = tflearn.fully_connected(inputs, 400, activation='relu')
-
-        # Add the action tensor in the 2nd hidden layer
-        # Use two temp layers to get the corresponding weights and biases
-        # t1 = tflearn.fully_connected(net, 300)
-        # t2 = tflearn.fully_connected(action, 300)
-
-        # net2 = tflearn.activation(tf.matmul(net,t1.W) + tf.matmul(action, t2.W) + t2.b, activation='relu')
-        # net2 = tflearn.activation(tflearn.merge([tf.matmul(net,t1.W), tf.matmul(action, t2.W)], 'concat'), activation='relu')
-        # tflearn.merge([inputs, action], 'concat')
-
-        # linear layer connected to 1 output representing Q(s,a)
-        # Weights are init to Uniform[-3e-3, 3e-3]
-        # w_init = tflearn.initializations.uniform(minval=-0.003, maxval=0.003)
-        # out = tflearn.fully_connected(net2, 1, weights_init=w_init)
-        # return inputs, action, out
 
     def train(self, inputs, action, predicted_q_value):
         return self.sess.run([self.out, self.loss, self.optimize], feed_dict={
@@ -111,14 +95,6 @@ class CriticNetwork(object):
             self.action: action,
             self.predicted_q_value: predicted_q_value
         })
-
-    # def getloss(self, inputs, action, predicted_q_value):
-    #     return self.sess.run([self.out,self.loss], feed_dict={
-    #     # return self.sess.run(self.optimize, feed_dict={
-    #         self.inputs: inputs,
-    #         self.action: action,
-    #         self.predicted_q_value: predicted_q_value
-    #     })
 
     def predict(self, inputs, action):
         return self.sess.run(self.out, feed_dict={

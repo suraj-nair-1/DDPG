@@ -86,6 +86,10 @@ class ActorNetwork(object):
         # scaled_out = tf.mul(out, self.high_action_bound - self.low_action_bound) + self.low_action_bound
         return inputs, out, out
 
+    def save_model(iterationnum):
+        model = tflearn.DNN(self.target_scaled_out)
+        model.save(self.LOGPATH + "models/actor_" + str(iterationnum)+".tflearn")
+
     def train(self, inputs, a_gradient):
         self.sess.run(self.optimize, feed_dict={
             self.inputs: inputs,

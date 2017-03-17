@@ -16,8 +16,8 @@ from actor_hfo import ActorNetwork
 from critic_hfo import CriticNetwork
 
 
-# LOGPATH = "../DDPG/logging/"
-LOGPATH = "/cs/ml/ddpgHFO/DDPG/logging/"
+# LOGPATH = "../DDPG/"
+LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 
 # Max training steps
 MAX_EPISODES = 500000
@@ -34,7 +34,7 @@ TAU = 0.0001
 
 # Noise for exploration
 EPS_GREEDY_INIT = 1.0
-EPS_ITERATIONS_ANNEAL = 10000
+EPS_ITERATIONS_ANNEAL = 100000
 
 # sigma = 1.0
 # sigma_ep_anneal = 2000
@@ -49,9 +49,10 @@ SUMMARY_DIR = './results/tf_ddpg'
 RANDOM_SEED = 1234
 # Size of replay buffer
 BUFFER_SIZE = 1000000
-MINIBATCH_SIZE = 1024
+MINIBATCH_SIZE = 32
 
-
+GPUENABLED = False
+ORACLE = False
 # ===========================
 #   Tensorflow Summary Ops
 # ===========================
@@ -68,7 +69,11 @@ MINIBATCH_SIZE = 1024
 
 
 def main(_):
-    with tf.device("/gpu:0"):
+    if GPUENABLED:
+        device = "/gpu:0"
+    else:
+        device = "/cpu:0"
+    with tf.device(device):
         with tf.Session() as sess:
             ITERATIONS = 0.0
 
@@ -118,6 +123,9 @@ def main(_):
                 s1 = hfo.getState()
                 old_reward = 0
                 critic_loss = 0.0
+
+                ep_good_q = 0.0
+                ep_bad_q = 0.0
                 # print "********************"
                 # print "Episode", i
                 # print "********************"
@@ -133,8 +141,20 @@ def main(_):
                     s_noise = np.reshape(s, (1, state_dim)) #+ np.random.rand(1, 19)
                     # print s_noise
                     a = actor.predict(s_noise)[0]
+
+                    ball_angle_sin = s[51]
+                    ang = np.degrees(np.arcsin(ball_angle_sin))
+
+                    # oracle = False
+                    if ORACLE:
+                        print ang
+                        a = [1, 0, 0, 0, 10, ang, 0, 0, 0, 0]
+                        index = 0
+                    else:
+                        index, a = actor.add_noise(a, max(0.1, EPS_GREEDY_INIT - ITERATIONS / EPS_ITERATIONS_ANNEAL))
+
                     # if replay_buffer.size() > MINIBATCH_SIZE:
-                    index, a = actor.add_noise(a, max(0.1, EPS_GREEDY_INIT - ITERATIONS / EPS_ITERATIONS_ANNEAL))
+                    # index, a = actor.add_noise(a, max(0.1, EPS_GREEDY_INIT - ITERATIONS / EPS_ITERATIONS_ANNEAL))
                         # for ind, item in enumerate(a[4:]):
                         #     a[ind+4] = max(low_action_bound[ind], min(a[ind+4], high_action_bound[ind]))
                         # index = np.argmax(a[:4])
@@ -195,6 +215,8 @@ def main(_):
                     # print curr_ball_prox
                     # print curr_goal_dist
 
+
+
                     r = 0.0
                     if j != 0:
                         # If game has finished, calculate reward based on whether or not a goal was scored
@@ -222,7 +244,7 @@ def main(_):
 
                     # Keep adding experience to the memory until
                     # there are at least minibatch size samples
-                    if replay_buffer.size() > MINIBATCH_SIZE:
+                    if (replay_buffer.size() > MINIBATCH_SIZE) and (ITERATIONS % 10 == 0):
                         s_batch, a_batch, r_batch, t_batch, s1_batch = \
                             replay_buffer.sample_batch(MINIBATCH_SIZE)
 
@@ -234,6 +256,25 @@ def main(_):
                         # print s1_batch.dtype
                         # print s1_batch.shape
                         # print actor.predict_target(s1_batch)
+                        # print s_batch.shape
+                        # print actor.predict_target(s_batch).shape
+                        good_batch = []
+                        bad_batch = []
+                        for elem in s_batch:
+                            ball_angle_sin = elem[51]
+                            ang = np.degrees(np.arcsin(ball_angle_sin))
+                            if ang > 0:
+                                bad_ang = ang - 180
+                            else:
+                                bad_ang = ang + 180
+                            good_batch.append([1, 0, 0, 0, 10, ang, 0, 0, 0, 0])
+                            bad_batch.append([1, 0, 0, 0, 10, bad_ang, 0, 0, 0, 0])
+                            
+                        target_good = critic.predict_target(s_batch, np.array(good_batch))
+                        target_bad = critic.predict_target(s_batch, np.array(bad_batch))
+                        ep_good_q += np.mean(target_good)
+                        ep_bad_q += np.mean(target_bad)
+
                         target_q = critic.predict_target(s1_batch, actor.predict_target(s1_batch))
 
                         y_i = []
@@ -260,6 +301,9 @@ def main(_):
                         # Update target networks
                         actor.update_target_network()
                         critic.update_target_network()
+
+                        if (ITERATIONS % 10000) == 0:
+                            actor.save_model(ITERATIONS)
                         # break
                     ITERATIONS += 1
                     ep_reward += r
@@ -274,8 +318,11 @@ def main(_):
                         # writer.add_summary(summary_str, i)
                         # writer.flush()
 
-                        f = open(LOGPATH +'logs7.txt', 'a')
-                        f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(j+1))+ "," + str(float(critic_loss)/ float(j+1)) + "," +  str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + "\n")
+                        f = open(LOGPATH +'logging/logs8.txt', 'a')
+                        f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(j+1))+ "," \
+                            + str(float(critic_loss)/ float(j+1)) + "," +  \
+                            str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
+                            "," + str(ep_good_q / float(j+1)) + "," + str(ep_bad_q / float(j+1)) + "\n")
                         f.close()
 
 
