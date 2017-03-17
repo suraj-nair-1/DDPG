@@ -150,9 +150,9 @@ def main(_):
                     ang = np.degrees(np.arcsin(ball_angle_sin))
 
                     # oracle = False
-                    if np.random.uniform() < 0.5:
+                    if np.random.uniform() < 0.9:
                         # print ang
-                        a = [1, 0, 0, 0, 100, ang, 0, 0, 0, 0]
+                        a = np.array([1, 0, 0, 0, 30, ang, 0, 0, 0, 0])
                         index = 0
                     else:
                         index, a = actor.add_noise(a, max(0.1, EPS_GREEDY_INIT - ITERATIONS / EPS_ITERATIONS_ANNEAL))
