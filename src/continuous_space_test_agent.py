@@ -152,7 +152,7 @@ def main(_):
                     # oracle = False
                     if np.random.uniform() < 0.5:
                         # print ang
-                        a = [1, 0, 0, 0, 10, ang, 0, 0, 0, 0]
+                        a = [1, 0, 0, 0, 100, ang, 0, 0, 0, 0]
                         index = 0
                     else:
                         index, a = actor.add_noise(a, max(0.1, EPS_GREEDY_INIT - ITERATIONS / EPS_ITERATIONS_ANNEAL))
