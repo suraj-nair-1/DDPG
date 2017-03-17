@@ -16,8 +16,8 @@ from actor_hfo import ActorNetwork
 from critic_hfo import CriticNetwork
 
 
-# LOGPATH = "../DDPG/"
-LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+LOGPATH = "../DDPG/"
+# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 
 # Max training steps
 MAX_EPISODES = 500000
@@ -150,7 +150,7 @@ def main(_):
                     ang = np.degrees(np.arcsin(ball_angle_sin))
 
                     # oracle = False
-                    if True:
+                    if np.random.uniform() < 0.7:
                         # print ang
                         a = np.array([1, 0, 0, 0, 10, ang, 0, 0, 0, 0])
                         index = 0
@@ -222,18 +222,23 @@ def main(_):
 
 
                     r = 0.0
+                    # print j
                     if j != 0:
                         # If game has finished, calculate reward based on whether or not a goal was scored
                         if terminal != IN_GAME:
                             if status == 1:
                                 r += 5
+                        else:
+                            # Else calculate reward as distance between ball and goal
+                            r += curr_ball_prox - old_ball_prox
+                            # print r
+                            r += -3.0 * (curr_goal_dist - old_goal_dist)
+                            # print r
+                            if (not old_kickable) and (curr_kickable):
+                                r += 1
+                            # print r
 
-                        # Else calculate reward as distance between ball and goal
-                        r += curr_ball_prox - old_ball_prox
-                        r += -3.0 * (curr_goal_dist - old_goal_dist)
-                        if (not old_kickable) and (curr_kickable):
-                            r += 1
-
+                    # print "\n\n\n"
                     old_ball_prox = curr_ball_prox
                     old_goal_dist = curr_goal_dist
                     old_kickable = curr_kickable
