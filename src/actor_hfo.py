@@ -86,7 +86,7 @@ class ActorNetwork(object):
         # scaled_out = tf.mul(out, self.high_action_bound - self.low_action_bound) + self.low_action_bound
         return inputs, out, out
 
-    def save_model(iterationnum):
+    def save_model(self, iterationnum):
         model = tflearn.DNN(self.target_scaled_out)
         model.save(self.LOGPATH + "models/actor_" + str(iterationnum)+".tflearn")
 
