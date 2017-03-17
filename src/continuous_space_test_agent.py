@@ -126,6 +126,10 @@ def main(_):
 
                 ep_good_q = 0.0
                 ep_bad_q = 0.0
+                ep_move_q = 0.0
+                ep_turn_q = 0.0
+                ep_tackle_q = 0.0
+                ep_kick_q = 0.0
                 # print "********************"
                 # print "Episode", i
                 # print "********************"
@@ -269,11 +273,31 @@ def main(_):
                                 bad_ang = ang + 180
                             good_batch.append([1, 0, 0, 0, 10, ang, 0, 0, 0, 0])
                             bad_batch.append([1, 0, 0, 0, 10, bad_ang, 0, 0, 0, 0])
+
+                        move_batch = []
+                        turn_batch = []
+                        tackle_batch = []
+                        kick_batch = []
+                        for elem in s_batch:
+                            move_batch.append([1, 0, 0, 0,np.random.uniform(0, 100) , np.random.uniform(-180, 180), 0, 0, 0, 0])
+                            turn_batch.append([0, 1, 0, 0, 0, 0, np.random.uniform(-180, 180), 0, 0, 0])
+                            tackle_batch.append([0, 0, 1, 0, 0, 0, 0, np.random.uniform(-180, 180), 0, 0])
+                            kick_batch.append([0, 0, 0, 1, 0, 0, 0, 0, np.random.uniform(0, 100) , np.random.uniform(-180, 180)])
+
                             
                         target_good = critic.predict_target(s_batch, np.array(good_batch))
                         target_bad = critic.predict_target(s_batch, np.array(bad_batch))
+                        target_move = critic.predict_target(s_batch, np.array(move_batch))
+                        target_turn = critic.predict_target(s_batch, np.array(turn_batch))
+                        target_tackle = critic.predict_target(s_batch, np.array(tackle_batch))
+                        target_kick = critic.predict_target(s_batch, np.array(kick_batch))
+
                         ep_good_q += np.mean(target_good)
                         ep_bad_q += np.mean(target_bad)
+                        ep_move_q += np.mean(target_move)
+                        ep_turn_q += np.mean(target_turn)
+                        ep_tackle_q += np.mean(target_tackle)
+                        ep_kick_q += np.mean(target_kick)
 
                         target_q = critic.predict_target(s1_batch, actor.predict_target(s1_batch))
 
@@ -318,11 +342,13 @@ def main(_):
                         # writer.add_summary(summary_str, i)
                         # writer.flush()
 
-                        f = open(LOGPATH +'logging/logs8.txt', 'a')
+                        f = open(LOGPATH +'logging/logs9.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(j+1))+ "," \
                             + str(float(critic_loss)/ float(j+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
-                            "," + str(ep_good_q / float(j+1)) + "," + str(ep_bad_q / float(j+1)) + "\n")
+                            "," + str(ep_good_q / float(j+1)) + "," + str(ep_bad_q / float(j+1))\
+                            + "," + str(ep_move_q / float(j+1)) + "," + str(ep_turn_q / float(j+1))\
+                            + "," + str(ep_tackle_q / float(j+1)) + "," + str(ep_kick_q / float(j+1)) + "\n")
                         f.close()
 
 
