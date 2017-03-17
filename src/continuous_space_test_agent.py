@@ -151,7 +151,7 @@ def main(_):
 
                     # oracle = False
                     if np.random.uniform() < 0.5:
-                        print ang
+                        # print ang
                         a = [1, 0, 0, 0, 10, ang, 0, 0, 0, 0]
                         index = 0
                     else:
