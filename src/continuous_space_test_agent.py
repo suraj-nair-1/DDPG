@@ -49,7 +49,7 @@ SUMMARY_DIR = './results/tf_ddpg'
 RANDOM_SEED = 1234
 # Size of replay buffer
 BUFFER_SIZE = 1000000
-MINIBATCH_SIZE = 32
+MINIBATCH_SIZE = 1024
 
 GPUENABLED = False
 ORACLE = False
@@ -150,7 +150,7 @@ def main(_):
                     ang = np.degrees(np.arcsin(ball_angle_sin))
 
                     # oracle = False
-                    if ORACLE:
+                    if np.random.uniform() < 0.5:
                         print ang
                         a = [1, 0, 0, 0, 10, ang, 0, 0, 0, 0]
                         index = 0
@@ -326,7 +326,7 @@ def main(_):
                         actor.update_target_network()
                         critic.update_target_network()
 
-                        if (ITERATIONS % 10000) == 0:
+                        if (ITERATIONS % 100000) == 0:
                             actor.save_model(ITERATIONS)
                         # break
                     ITERATIONS += 1
@@ -342,7 +342,7 @@ def main(_):
                         # writer.add_summary(summary_str, i)
                         # writer.flush()
 
-                        f = open(LOGPATH +'logging/logs9.txt', 'a')
+                        f = open(LOGPATH +'logging/logs10.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(j+1))+ "," \
                             + str(float(critic_loss)/ float(j+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
