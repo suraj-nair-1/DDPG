@@ -358,12 +358,12 @@ def main(_):
                         # writer.flush()
 
                         f = open(LOGPATH +'logging/logs11.txt', 'a')
-                        f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates))+ "," \
-                            + str(float(critic_loss)/ float(j+1)) + "," +  \
+                        f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
+                            + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
-                            "," + str(ep_good_q / float(ep_updates)) + "," + str(ep_bad_q / float(ep_updates))\
-                            + "," + str(ep_move_q / float(ep_updates)) + "," + str(ep_turn_q / float(ep_updates))\
-                            + "," + str(ep_tackle_q / float(ep_updates)) + "," + str(ep_kick_q / float(ep_updates)) + "\n")
+                            "," + str(ep_good_q / float(ep_updates+1)) + "," + str(ep_bad_q / float(ep_updates+1))\
+                            + "," + str(ep_move_q / float(ep_updates+1)) + "," + str(ep_turn_q / float(ep_updates+1))\
+                            + "," + str(ep_tackle_q / float(ep_updates+1)) + "," + str(ep_kick_q / float(ep_updates+1)) + "\n")
                         f.close()
 
                         print('| Reward: ' , float(ep_reward), " | Episode", i, \
