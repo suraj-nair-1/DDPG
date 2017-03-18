@@ -130,6 +130,7 @@ def main(_):
                 ep_turn_q = 0.0
                 ep_tackle_q = 0.0
                 ep_kick_q = 0.0
+                ep_updates = 0
                 # print "********************"
                 # print "Episode", i
                 # print "********************"
@@ -149,10 +150,17 @@ def main(_):
                     ball_angle_sin = s[51]
                     ang = np.degrees(np.arcsin(ball_angle_sin))
 
-                    # oracle = False
-                    if np.random.uniform() < 0.7:
+                    oracle = np.random.uniform()
+                    if oracle < 0.25:
                         # print ang
                         a = np.array([1, 0, 0, 0, 10, ang, 0, 0, 0, 0])
+                        index = 0
+                    elif oracle >= 0.25 and oracle < 0.5:
+                        if ang > 0:
+                            bad_ang = ang - 180
+                        else:
+                            bad_ang = ang + 180
+                        a = np.array([1, 0, 0, 0, 10, bad_ang, 0, 0, 0, 0])
                         index = 0
                     else:
                         index, a = actor.add_noise(a, max(0.1, EPS_GREEDY_INIT - ITERATIONS / EPS_ITERATIONS_ANNEAL))
@@ -257,6 +265,8 @@ def main(_):
                         s_batch, a_batch, r_batch, t_batch, s1_batch = \
                             replay_buffer.sample_batch(MINIBATCH_SIZE)
 
+                        ep_updates += 1.0
+
                         # print "REPLAY SIZE ", replay_buffer.size()
 
                         # Calculate targets
@@ -331,7 +341,7 @@ def main(_):
                         actor.update_target_network()
                         critic.update_target_network()
 
-                        if (ITERATIONS % 100000) == 0:
+                        if (ITERATIONS % 1000000) == 0:
                             actor.save_model(ITERATIONS)
                         # break
                     ITERATIONS += 1
@@ -347,15 +357,14 @@ def main(_):
                         # writer.add_summary(summary_str, i)
                         # writer.flush()
 
-                        f = open(LOGPATH +'logging/logs10.txt', 'a')
-                        f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(j+1))+ "," \
+                        f = open(LOGPATH +'logging/logs11.txt', 'a')
+                        f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates))+ "," \
                             + str(float(critic_loss)/ float(j+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
-                            "," + str(ep_good_q / float(j+1)) + "," + str(ep_bad_q / float(j+1))\
-                            + "," + str(ep_move_q / float(j+1)) + "," + str(ep_turn_q / float(j+1))\
-                            + "," + str(ep_tackle_q / float(j+1)) + "," + str(ep_kick_q / float(j+1)) + "\n")
+                            "," + str(ep_good_q / float(ep_updates)) + "," + str(ep_bad_q / float(ep_updates))\
+                            + "," + str(ep_move_q / float(ep_updates)) + "," + str(ep_turn_q / float(ep_updates))\
+                            + "," + str(ep_tackle_q / float(ep_updates)) + "," + str(ep_kick_q / float(ep_updates)) + "\n")
                         f.close()
-
 
                         print('| Reward: ' , float(ep_reward), " | Episode", i, \
                             '| Qmax:',  (ep_ave_max_q / float(j+1)), ' | Critic Loss: ', float(critic_loss)/ float(j+1))
