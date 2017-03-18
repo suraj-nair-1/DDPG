@@ -65,9 +65,9 @@ class ActorNetwork(object):
         w_init = tflearn.initializations.normal(stddev = -0.01)
         out = tflearn.fully_connected(l4a, self.a_dim, weights_init=w_init)
 
-        choice = tf.slice(out, [0,0], [-1, 4])
-        params = tf.slice(out, [0,4], [-1, 6])
-        choice_probs = tflearn.activations.softmax(choice)
+        # choice = tf.slice(out, [0,0], [-1, 4])
+        # params = tf.slice(out, [0,4], [-1, 6])
+        # choice_probs = tflearn.activations.softmax(choice)
 
         # params2 = tf.multiply(tf.divide(params + 1, 2), self.high_action_bound - self.low_action_bound) + self.low_action_bound
         # print tf.concat([tflearn.activations.sigmoid(choice), \
@@ -77,14 +77,14 @@ class ActorNetwork(object):
         # print params2
         # print params2
         # print choice_probs
-        scaled_out = tflearn.merge([choice_probs, params], 'concat')
+        # scaled_out = tflearn.merge([choice_probs, params], 'concat')
         # scaled_out = tf.concat(0, [choice_probs, params])
         # print scaled_out
 
         # Scale output to low_action_bound to high_action_bound
         # scaled_out = tf.div(out, tf.reduce_sum(out))
         # scaled_out = tf.mul(out, self.high_action_bound - self.low_action_bound) + self.low_action_bound
-        return inputs, out, scaled_out
+        return inputs, out, out
 
     def save_model(self, iterationnum):
         model = tflearn.DNN(self.target_scaled_out)
