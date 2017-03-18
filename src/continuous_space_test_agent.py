@@ -265,7 +265,7 @@ def main(_):
                         s_batch, a_batch, r_batch, t_batch, s1_batch = \
                             replay_buffer.sample_batch(MINIBATCH_SIZE)
 
-                        ep_updates += 1.0
+                        ep_updates += 1
 
                         # print "REPLAY SIZE ", replay_buffer.size()
 
