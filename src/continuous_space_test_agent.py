@@ -150,7 +150,8 @@ def main(_):
                     ball_angle_sin = s[51]
                     ang = np.degrees(np.arcsin(ball_angle_sin))
 
-                    oracle = np.random.uniform()
+                    # oracle = np.random.uniform()
+                    oracle = 0.8 # No oracle
                     if oracle < 0.25:
                         # print ang
                         a = np.array([1, 0, 0, 0, 10, ang, 0, 0, 0, 0])
@@ -357,7 +358,7 @@ def main(_):
                         # writer.add_summary(summary_str, i)
                         # writer.flush()
 
-                        f = open(LOGPATH +'logging/logs11.txt', 'a')
+                        f = open(LOGPATH +'logging/logs12.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                             + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
