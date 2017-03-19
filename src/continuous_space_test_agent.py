@@ -130,7 +130,7 @@ def main(_):
                 ep_turn_q = 0.0
                 ep_tackle_q = 0.0
                 ep_kick_q = 0.0
-                ep_updates = 0
+                ep_updates = 0.0
                 # print "********************"
                 # print "Episode", i
                 # print "********************"
@@ -147,24 +147,24 @@ def main(_):
                     # print s_noise
                     a = actor.predict(s_noise)[0]
 
-                    ball_angle_sin = s[51]
-                    ang = np.degrees(np.arcsin(ball_angle_sin))
+                    # ball_angle_sin = s[51]
+                    # ang = np.degrees(np.arcsin(ball_angle_sin))
 
                     # oracle = np.random.uniform()
-                    oracle = 0.8 # No oracle
-                    if oracle < 0.25:
-                        # print ang
-                        a = np.array([1, 0, 0, 0, 10, ang, 0, 0, 0, 0])
-                        index = 0
-                    elif oracle >= 0.25 and oracle < 0.5:
-                        if ang > 0:
-                            bad_ang = ang - 180
-                        else:
-                            bad_ang = ang + 180
-                        a = np.array([1, 0, 0, 0, 10, bad_ang, 0, 0, 0, 0])
-                        index = 0
-                    else:
-                        index, a = actor.add_noise(a, max(0.1, EPS_GREEDY_INIT - ITERATIONS / EPS_ITERATIONS_ANNEAL))
+                    # oracle = 0.8 # No oracle
+                    # if oracle < 0.25:
+                    #     # print ang
+                    #     a = np.array([1, 0, 0, 0, 10, ang, 0, 0, 0, 0])
+                    #     index = 0
+                    # elif oracle >= 0.25 and oracle < 0.5:
+                    #     if ang > 0:
+                    #         bad_ang = ang - 180
+                    #     else:
+                    #         bad_ang = ang + 180
+                    #     a = np.array([1, 0, 0, 0, 10, bad_ang, 0, 0, 0, 0])
+                    #     index = 0
+                    # else:
+                    index, a = actor.add_noise(a, max(0.1, EPS_GREEDY_INIT - ITERATIONS / EPS_ITERATIONS_ANNEAL))
 
                     # if replay_buffer.size() > MINIBATCH_SIZE:
                     # index, a = actor.add_noise(a, max(0.1, EPS_GREEDY_INIT - ITERATIONS / EPS_ITERATIONS_ANNEAL))
