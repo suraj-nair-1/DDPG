@@ -25,12 +25,12 @@ class ActorNetwork(object):
         # self.ou_noise = [r[1] for r in self.ou_noise_params]
 
         # Actor Network
-        self.inputs, self.out, self.scaled_out = self.create_actor_network()
+        self.inputs, self.out, self.scaled_out, self.model, self.l = self.create_actor_network()
 
         self.network_params = tf.trainable_variables()
 
         # Target Network
-        self.target_inputs, self.target_out, self.target_scaled_out = self.create_actor_network()
+        self.target_inputs, self.target_out, self.target_scaled_out, self.target_model, self.target_l = self.create_actor_network()
 
         self.target_network_params = tf.trainable_variables()[len(self.network_params):]
 
@@ -78,25 +78,29 @@ class ActorNetwork(object):
         # print params2
         # print choice_probs
         scaled_out = tflearn.merge([choice_probs, params], 'concat')
-        # model = tflearn.DNN(scaled_out)
+        model = tflearn.DNN(scaled_out)
         # scaled_out = tf.concat(0, [choice_probs, params])
         # print scaled_out
 
         # Scale output to low_action_bound to high_action_bound
         # scaled_out = tf.div(out, tf.reduce_sum(out))
         # scaled_out = tf.mul(out, self.high_action_bound - self.low_action_bound) + self.low_action_bound
-        return inputs, out, scaled_out
+        return inputs, out, scaled_out, model, l
 
     def load(self, loadfrom):
-        model = tflearn.DNN(self.scaled_out)
-        target_model = tflearn.DNN(self.target_scaled_out)
+        # model = tflearn.DNN(self.scaled_out)
+        print self.target_l.W
+        print self.target_model.get_weights(self.target_l.W)
+        # target_model = tflearn.DNN(self.target_scaled_out)
         if loadfrom is not None:
-            model.load(loadfrom)
-            target_model.load(loadfrom)
+            self.model.load(loadfrom)
+            self.target_model.load(loadfrom)
+        print self.target_l.W
+        print self.target_model.get_weights(self.target_l.W)
 
     def save_model(self, iterationnum):
-        model = tflearn.DNN(self.target_scaled_out)
-        model.save(self.LOGPATH + "models/actor_run4_" + str(iterationnum)+".tflearn")
+        # model = tflearn.DNN(self.target_scaled_out)
+        self.target_model.save(self.LOGPATH + "models/actor_run4_" + str(iterationnum)+".tflearn")
 
     def train(self, inputs, a_gradient):
         self.sess.run(self.optimize, feed_dict={
