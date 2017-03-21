@@ -78,6 +78,7 @@ class ActorNetwork(object):
         # print params2
         # print choice_probs
         scaled_out = tflearn.merge([choice_probs, params], 'concat')
+        # model = tflearn.DNN(scaled_out)
         # scaled_out = tf.concat(0, [choice_probs, params])
         # print scaled_out
 
@@ -85,6 +86,13 @@ class ActorNetwork(object):
         # scaled_out = tf.div(out, tf.reduce_sum(out))
         # scaled_out = tf.mul(out, self.high_action_bound - self.low_action_bound) + self.low_action_bound
         return inputs, out, scaled_out
+
+    def load(self, loadfrom):
+        model = tflearn.DNN(self.scaled_out)
+        target_model = tflearn.DNN(self.target_scaled_out)
+        if loadfrom is not None:
+            model.load(loadfrom)
+            target_model.load(loadfrom)
 
     def save_model(self, iterationnum):
         model = tflearn.DNN(self.target_scaled_out)
