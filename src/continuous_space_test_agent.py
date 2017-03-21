@@ -82,7 +82,7 @@ def main(_):
             # Connect to the server with the specified
             # feature set. See feature sets in hfo.py/hfo.hpp.
             hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
-                                'bin/teams/base/config/formations-dt', 4200,
+                                'bin/teams/base/config/formations-dt', 6000,
                                 'localhost', 'base_left', False)
 
             np.random.seed(RANDOM_SEED)
@@ -100,10 +100,7 @@ def main(_):
                 CRITIC_LEARNING_RATE, TAU, actor.get_num_trainable_vars(), MINIBATCH_SIZE)
 
             # Set up summary Ops
-            # summary_ops, summary_vars = build_summaries()
-
             sess.run(tf.global_variables_initializer())
-            # writer = tf.summary.FileWriter(SUMMARY_DIR, sess.graph)
 
             # Initialize target network weights
             actor.update_target_network()
@@ -358,7 +355,7 @@ def main(_):
                         # writer.add_summary(summary_str, i)
                         # writer.flush()
 
-                        f = open(LOGPATH +'logging/logs12.txt', 'a')
+                        f = open(LOGPATH +'logging/logs13.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                             + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
