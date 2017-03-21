@@ -1,2 +1,2 @@
-model_checkpoint_path: "/cs/ml/ddpgHFO/DDPG/models/actor_run4_4000000.0.tflearn"
-all_model_checkpoint_paths: "/cs/ml/ddpgHFO/DDPG/models/actor_run4_4000000.0.tflearn"
+model_checkpoint_path: "/Users/surajnair/Documents/Tech/research/DDPG/models/test_save3000.0.tflearn"
+all_model_checkpoint_paths: "/Users/surajnair/Documents/Tech/research/DDPG/models/test_save3000.0.tflearn"

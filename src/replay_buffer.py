@@ -14,16 +14,20 @@ class ReplayBuffer(object):
         self.buffer_size = buffer_size
         self.count = 0
         self.buffer = deque()
+        self.sortedbuffer = deque()
         random.seed(random_seed)
 
     def add(self, s, a, r, t, s2):
         experience = (s, a, r, t, s2)
         if self.count < self.buffer_size:
             self.buffer.append(experience)
+            self.sortedbuffer.append(experience)
             self.count += 1
         else:
             self.buffer.popleft()
             self.buffer.append(experience)
+            # self.sortedbuffer.pop()
+            self.sortedbuffer.append(experience)
 
     def size(self):
         return self.count
@@ -31,10 +35,14 @@ class ReplayBuffer(object):
     def sample_batch(self, batch_size):
         batch = []
 
-        if self.count < batch_size:
-            batch = random.sample(self.buffer, self.count)
-        else:
-            batch = random.sample(self.buffer, batch_size)
+        # while len(batch) < batch_size:
+        if np.random.uniform() < 0.1:
+            self.sortedbuffer = sorted(self.sortedbuffer, key=lambda row: np.abs(row[2]), reverse = True)[:(self.buffer_size/10)]
+
+
+        batch1 = random.sample(self.sortedbuffer, batch_size / 2)
+        batch2 = random.sample(self.buffer, batch_size / 2)
+        batch = batch1 + batch2
 
         s_batch = np.array([_[0] for _ in batch])
         a_batch = np.array([_[1] for _ in batch])
