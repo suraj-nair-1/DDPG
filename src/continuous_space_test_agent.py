@@ -19,7 +19,7 @@ from critic_hfo import CriticNetwork
 # LOGPATH = "../DDPG/"
 LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 
-PRIORITIZED = False
+PRIORITIZED = True
 
 # Max training steps
 MAX_EPISODES = 500000
@@ -51,7 +51,7 @@ SUMMARY_DIR = './results/tf_ddpg'
 RANDOM_SEED = 1234
 # Size of replay buffer
 BUFFER_SIZE = 1000000
-MINIBATCH_SIZE = 32
+MINIBATCH_SIZE = 1024
 
 GPUENABLED = False
 ORACLE = False
@@ -84,7 +84,7 @@ def main(_):
             # Connect to the server with the specified
             # feature set. See feature sets in hfo.py/hfo.hpp.
             hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
-                                'bin/teams/base/config/formations-dt', 6000,
+                                'bin/teams/base/config/formations-dt', 4200,
                                 'localhost', 'base_left', False)
 
             np.random.seed(RANDOM_SEED)
