@@ -32,17 +32,33 @@ class ReplayBuffer(object):
     def size(self):
         return self.count
 
-    def sample_batch(self, batch_size):
+    def sample_batch_prioritized(self, batch_size):
         batch = []
 
         # while len(batch) < batch_size:
-        if np.random.uniform() < 0.1:
-            self.sortedbuffer = sorted(self.sortedbuffer, key=lambda row: np.abs(row[2]), reverse = True)[:(self.buffer_size/10)]
+        worst = self.sortedbuffer[:(self.buffer_size / 10)]
+        best = self.sortedbuffer[-(self.buffer_size / 10):]
+        if np.random.uniform() < 0.01:
+            self.sortedbuffer = sorted(self.sortedbuffer, key=lambda row: np.abs(row[2]))
+            self.sortedbuffer = deque(worst + best)
 
 
-        batch1 = random.sample(self.sortedbuffer, batch_size / 2)
-        batch2 = random.sample(self.buffer, batch_size / 2)
-        batch = batch1 + batch2
+        batch1 = random.sample(worst, batch_size / 4)
+        batch2 = random.sample(best, batch_size / 4)
+        batch3 = random.sample(self.buffer, batch_size / 2)
+        batch = batch1 + batch2 + batch3
+
+        s_batch = np.array([_[0] for _ in batch])
+        a_batch = np.array([_[1] for _ in batch])
+        r_batch = np.array([_[2] for _ in batch])
+        t_batch = np.array([_[3] for _ in batch])
+        s2_batch = np.array([_[4] for _ in batch])
+
+        return s_batch, a_batch, r_batch, t_batch, s2_batch
+
+    def sample_batch(self, batch_size):
+
+        batch = random.sample(self.buffer, batch_size)
 
         s_batch = np.array([_[0] for _ in batch])
         a_batch = np.array([_[1] for _ in batch])
