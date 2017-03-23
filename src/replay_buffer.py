@@ -14,7 +14,7 @@ class ReplayBuffer(object):
         self.buffer_size = buffer_size
         self.count = 0
         self.buffer = deque()
-        self.sortedbuffer = deque()
+        self.sortedbuffer = []
         random.seed(random_seed)
 
     def add(self, s, a, r, t, s2):
@@ -40,7 +40,7 @@ class ReplayBuffer(object):
         best = self.sortedbuffer[-(self.buffer_size / 10):]
         if np.random.uniform() < 0.01:
             self.sortedbuffer = sorted(self.sortedbuffer, key=lambda row: np.abs(row[2]))
-            self.sortedbuffer = deque(worst + best)
+            self.sortedbuffer = worst + best
 
 
         batch1 = random.sample(worst, batch_size / 4)
