@@ -19,6 +19,8 @@ from critic_hfo import CriticNetwork
 # LOGPATH = "../DDPG/"
 LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 
+PRIORITIZED = False
+
 # Max training steps
 MAX_EPISODES = 500000
 # Max episode length
@@ -49,7 +51,7 @@ SUMMARY_DIR = './results/tf_ddpg'
 RANDOM_SEED = 1234
 # Size of replay buffer
 BUFFER_SIZE = 1000000
-MINIBATCH_SIZE = 1024
+MINIBATCH_SIZE = 32
 
 GPUENABLED = False
 ORACLE = False
@@ -260,8 +262,13 @@ def main(_):
                     # Keep adding experience to the memory until
                     # there are at least minibatch size samples
                     if (replay_buffer.size() > MINIBATCH_SIZE) and (ITERATIONS % 10 == 0):
-                        s_batch, a_batch, r_batch, t_batch, s1_batch = \
-                            replay_buffer.sample_batch(MINIBATCH_SIZE)
+
+                        if (not PRIORITIZED) or (ITERATIONS < 100000):
+                            s_batch, a_batch, r_batch, t_batch, s1_batch = \
+                                replay_buffer.sample_batch(MINIBATCH_SIZE)
+                        else:
+                            s_batch, a_batch, r_batch, t_batch, s1_batch = \
+                                replay_buffer.sample_batch_prioritized(MINIBATCH_SIZE)
 
                         ep_updates += 1
 
@@ -355,7 +362,7 @@ def main(_):
                         # writer.add_summary(summary_str, i)
                         # writer.flush()
 
-                        f = open(LOGPATH +'logging/logs13.txt', 'a')
+                        f = open(LOGPATH +'logging/logs14.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                             + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
