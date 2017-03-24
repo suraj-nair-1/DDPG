@@ -95,7 +95,7 @@ class ActorNetwork(object):
     def save_model(self, iterationnum):
         # model = tflearn.DNN(self.target_scaled_out, session = self.sess)
         # print model
-        self.target_model.save(self.LOGPATH + "models/actor_run7_" + str(iterationnum)+".tflearn")
+        self.target_model.save(self.LOGPATH + "models/actor_run8_" + str(iterationnum)+".tflearn")
 
     def train(self, inputs, a_gradient):
         self.sess.run(self.optimize, feed_dict={
