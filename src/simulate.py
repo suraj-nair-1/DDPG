@@ -47,7 +47,7 @@ def main(_):
     low_action_bound = np.array([0., -180., -180., -180., 0., -180.])
     high_action_bound = np.array([100., 180., 180., 180., 100., 180.])
 
-    actor = ActorNetworkReplay(state_dim, action_dim, "../DDPG/models/actor_run7_3000000.0.tflearn" )
+    actor = ActorNetworkReplay(state_dim, action_dim, "../DDPG/models/actor_run8_2000000.0.tflearn" )
 
 
 
@@ -88,6 +88,7 @@ def main(_):
             hfo.act(*action)
             # print "\n"
             terminal = hfo.step()
+            print terminal
 
 
 if __name__ == '__main__':

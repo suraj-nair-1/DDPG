@@ -90,7 +90,7 @@ def main(_):
             np.random.seed(RANDOM_SEED)
             tf.set_random_seed(RANDOM_SEED)
 
-            state_dim = 66
+            state_dim = 58
             action_dim = 10
             low_action_bound = np.array([0., -180., -180., -180., 0., -180.])
             high_action_bound = np.array([100., 180., 180., 180., 100., 180.])
@@ -233,9 +233,8 @@ def main(_):
                     # print j
                     if j != 0:
                         # If game has finished, calculate reward based on whether or not a goal was scored
-                        if terminal != IN_GAME:
-                            if status == 1:
-                                r += 5
+                        if int(terminal) == 1:
+                            r += 5
                         else:
                             # Else calculate reward as distance between ball and goal
                             r += curr_ball_prox - old_ball_prox
