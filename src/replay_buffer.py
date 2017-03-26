@@ -38,10 +38,7 @@ class ReplayBuffer(object):
         # while len(batch) < batch_size:
         worst = self.sortedbuffer[:(self.buffer_size / 10)]
         best = self.sortedbuffer[-(self.buffer_size / 10):]
-
-        if np.random.uniform() < .00001:
-            self.sortedbuffer = list(self.buffer)
-
+        
         if np.random.uniform() < 0.01:
             self.sortedbuffer = sorted(self.sortedbuffer, key=lambda row: row[2])
             worst = self.sortedbuffer[:(self.buffer_size / 10)]
