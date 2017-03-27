@@ -233,8 +233,9 @@ def main(_):
                     # print j
                     if j != 0:
                         # If game has finished, calculate reward based on whether or not a goal was scored
-                        if int(terminal) == 1:
-                            r += 5
+                        if terminal != IN_GAME:
+                            if int(terminal) == 1:
+                                r += 5
                         else:
                             # Else calculate reward as distance between ball and goal
                             r += curr_ball_prox - old_ball_prox
@@ -262,7 +263,7 @@ def main(_):
                     # there are at least minibatch size samples
                     if (replay_buffer.size() > MINIBATCH_SIZE) and (ITERATIONS % 10 == 0):
 
-                        if (not PRIORITIZED) or (ITERATIONS < 100000):
+                        if (not PRIORITIZED) or (ITERATIONS < 200000):
                             s_batch, a_batch, r_batch, t_batch, s1_batch = \
                                 replay_buffer.sample_batch(MINIBATCH_SIZE)
                         else:
