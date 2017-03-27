@@ -84,13 +84,13 @@ def main(_):
             # Connect to the server with the specified
             # feature set. See feature sets in hfo.py/hfo.hpp.
             hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
-                                'bin/teams/base/config/formations-dt', 6000,
+                                'bin/teams/base/config/formations-dt', 4200,
                                 'localhost', 'base_left', False)
 
             np.random.seed(RANDOM_SEED)
             tf.set_random_seed(RANDOM_SEED)
 
-            state_dim = 58
+            state_dim = 66
             action_dim = 10
             low_action_bound = np.array([0., -180., -180., -180., 0., -180.])
             high_action_bound = np.array([100., 180., 180., 180., 100., 180.])
@@ -363,7 +363,7 @@ def main(_):
                         # writer.add_summary(summary_str, i)
                         # writer.flush()
 
-                        f = open(LOGPATH +'logging/logs18.txt', 'a')
+                        f = open(LOGPATH +'logging/logs19.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                             + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
