@@ -36,7 +36,7 @@ TAU = 0.0001
 
 # Noise for exploration
 EPS_GREEDY_INIT = 1.0
-EPS_ITERATIONS_ANNEAL = 1000000
+EPS_ITERATIONS_ANNEAL = 3000000
 
 # sigma = 1.0
 # sigma_ep_anneal = 2000
@@ -263,7 +263,7 @@ def main(_):
                     # there are at least minibatch size samples
                     if (replay_buffer.size() > MINIBATCH_SIZE) and (ITERATIONS % 10 == 0):
 
-                        if (not PRIORITIZED) or (ITERATIONS < 200000):
+                        if (not PRIORITIZED) or (ITERATIONS < 300000):
                             s_batch, a_batch, r_batch, t_batch, s1_batch = \
                                 replay_buffer.sample_batch(MINIBATCH_SIZE)
                         else:
