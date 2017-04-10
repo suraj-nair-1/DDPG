@@ -42,12 +42,12 @@ def main(_):
                         'bin/teams/base/config/formations-dt', 4200,
                         'localhost', 'base_left', False)
 
-    state_dim = 58
+    state_dim = 66
     action_dim = 10
     low_action_bound = np.array([0., -180., -180., -180., 0., -180.])
     high_action_bound = np.array([100., 180., 180., 180., 100., 180.])
 
-    actor = ActorNetworkReplay(state_dim, action_dim, "../DDPG/models/actor_run10_2000000.0.tflearn" )
+    actor = ActorNetworkReplay(state_dim, action_dim, "../DDPG/models/actor_run11_6000000.0.tflearn" )
 
 
 

@@ -15,6 +15,7 @@ class ReplayBuffer(object):
         self.count = 0
         self.buffer = deque()
         self.sortedbuffer = []
+        self.sortedbuffer2 = []
         random.seed(random_seed)
 
     def add(self, s, a, r, t, s2):
@@ -22,12 +23,14 @@ class ReplayBuffer(object):
         if self.count < self.buffer_size:
             self.buffer.append(experience)
             self.sortedbuffer.append(experience)
+            self.sortedbuffer2.append(experience)
             self.count += 1
         else:
             self.buffer.popleft()
             self.buffer.append(experience)
             # self.sortedbuffer.pop()
             self.sortedbuffer.append(experience)
+            self.sortedbuffer2.append(experience)
 
     def size(self):
         return self.count
@@ -38,6 +41,7 @@ class ReplayBuffer(object):
         # while len(batch) < batch_size:
         worst = self.sortedbuffer[:(self.buffer_size / 10)]
         best = self.sortedbuffer[-(self.buffer_size / 10):]
+        zero = self.sortedbuffer2[:(self.buffer_size / 5)]
         
         if np.random.uniform() < 0.01:
             self.sortedbuffer = sorted(self.sortedbuffer, key=lambda row: row[2])
@@ -45,11 +49,17 @@ class ReplayBuffer(object):
             best = self.sortedbuffer[-(self.buffer_size / 10):]
             self.sortedbuffer = worst + best
 
+            self.sortedbuffer2 = sorted(self.sortedbuffer, key=lambda row: np.abs(row[2]))
+            zero = self.sortedbuffer2[:(self.buffer_size / 5)]
+            self.sortedbuffer2 = zero
+
+
 
         batch1 = random.sample(worst, batch_size / 4)
         batch2 = random.sample(best, batch_size / 4)
-        batch3 = random.sample(self.buffer, batch_size / 2)
-        batch = batch1 + batch2 + batch3
+        batch3 = random.sample(zero, batch_size / 4)
+        batch4 = random.sample(self.buffer, batch_size / 4)
+        batch = batch1 + batch2 + batch3 + batch4
 
         s_batch = np.array([_[0] for _ in batch])
         a_batch = np.array([_[1] for _ in batch])

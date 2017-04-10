@@ -119,7 +119,7 @@ def main(_):
 
                 status = IN_GAME
                 # Grab the state features from the environment
-                s1 = hfo.getState()
+                s1 = np.concatenate((hfo.getState(), np.ones((8,))), axis =0)
                 old_reward = 0
                 critic_loss = 0.0
 
@@ -197,7 +197,7 @@ def main(_):
                     terminal = hfo.step()
 
                     # Get new state s_(t+1)
-                    s1 = hfo.getState()
+                    s1 = np.concatenate((hfo.getState(), np.ones((8,))), axis =0)
 
                     # curr_ball_prox = 1 - 2*(np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[1])**2) / np.sqrt(20))
                     # curr_goal_dist = np.sqrt((s1[3] - 1)**2 + (s1[4])**2)
@@ -263,7 +263,7 @@ def main(_):
                     # there are at least minibatch size samples
                     if (replay_buffer.size() > MINIBATCH_SIZE) and (ITERATIONS % 10 == 0):
 
-                        if (not PRIORITIZED) or (ITERATIONS < 300000):
+                        if (not PRIORITIZED) or (ITERATIONS < 300000) or (ITERATIONS > 4000000):
                             s_batch, a_batch, r_batch, t_batch, s1_batch = \
                                 replay_buffer.sample_batch(MINIBATCH_SIZE)
                         else:
@@ -363,7 +363,7 @@ def main(_):
                         # writer.add_summary(summary_str, i)
                         # writer.flush()
 
-                        f = open(LOGPATH +'logging/logs19.txt', 'a')
+                        f = open(LOGPATH +'logging/logs21.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                             + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
