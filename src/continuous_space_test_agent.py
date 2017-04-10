@@ -84,7 +84,7 @@ def main(_):
             # Connect to the server with the specified
             # feature set. See feature sets in hfo.py/hfo.hpp.
             hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
-                                'bin/teams/base/config/formations-dt', 4200,
+                                'bin/teams/base/config/formations-dt', 6000,
                                 'localhost', 'base_left', False)
 
             np.random.seed(RANDOM_SEED)
@@ -119,7 +119,8 @@ def main(_):
 
                 status = IN_GAME
                 # Grab the state features from the environment
-                s1 = np.concatenate((hfo.getState(), np.ones((8,))), axis =0)
+                # s1 = np.concatenate((hfo.getState(), np.ones((8,))), axis =0)
+                s1 = hfo.getState()
                 old_reward = 0
                 critic_loss = 0.0
 
@@ -197,7 +198,8 @@ def main(_):
                     terminal = hfo.step()
 
                     # Get new state s_(t+1)
-                    s1 = np.concatenate((hfo.getState(), np.ones((8,))), axis =0)
+                    s1 = hfo.getState()
+                    # s1 = np.concatenate((hfo.getState(), np.ones((8,))), axis =0)
 
                     # curr_ball_prox = 1 - 2*(np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[1])**2) / np.sqrt(20))
                     # curr_goal_dist = np.sqrt((s1[3] - 1)**2 + (s1[4])**2)
@@ -363,7 +365,7 @@ def main(_):
                         # writer.add_summary(summary_str, i)
                         # writer.flush()
 
-                        f = open(LOGPATH +'logging/logs21.txt', 'a')
+                        f = open(LOGPATH +'logging/logs22.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                             + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
