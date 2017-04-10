@@ -36,7 +36,7 @@ TAU = 0.0001
 
 # Noise for exploration
 EPS_GREEDY_INIT = 1.0
-EPS_ITERATIONS_ANNEAL = 3000000
+EPS_ITERATIONS_ANNEAL = 1000000
 
 # sigma = 1.0
 # sigma_ep_anneal = 2000
