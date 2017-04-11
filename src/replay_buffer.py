@@ -49,7 +49,7 @@ class ReplayBuffer(object):
             best = self.sortedbuffer[-(self.buffer_size / 10):]
             self.sortedbuffer = worst + best
 
-            self.sortedbuffer2 = sorted(self.sortedbuffer, key=lambda row: np.abs(row[2]))
+            self.sortedbuffer2 = sorted(self.sortedbuffer2, key=lambda row: np.abs(row[2]))
             zero = self.sortedbuffer2[:(self.buffer_size / 5)]
             self.sortedbuffer2 = zero
 
