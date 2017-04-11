@@ -90,7 +90,7 @@ def main(_):
             np.random.seed(RANDOM_SEED)
             tf.set_random_seed(RANDOM_SEED)
 
-            state_dim = 66
+            state_dim = 58
             action_dim = 10
             low_action_bound = np.array([0., -180., -180., -180., 0., -180.])
             high_action_bound = np.array([100., 180., 180., 180., 100., 180.])
@@ -265,7 +265,7 @@ def main(_):
                     # there are at least minibatch size samples
                     if (replay_buffer.size() > MINIBATCH_SIZE) and (ITERATIONS % 10 == 0):
 
-                        if (not PRIORITIZED) or (ITERATIONS < 300000) or (ITERATIONS > 4000000):
+                        if (not PRIORITIZED) or (ITERATIONS < 200000) or (ITERATIONS > 4000000):
                             s_batch, a_batch, r_batch, t_batch, s1_batch = \
                                 replay_buffer.sample_batch(MINIBATCH_SIZE)
                         else:
@@ -365,7 +365,7 @@ def main(_):
                         # writer.add_summary(summary_str, i)
                         # writer.flush()
 
-                        f = open(LOGPATH +'logging/logs22.txt', 'a')
+                        f = open(LOGPATH +'logging/logs23.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                             + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
