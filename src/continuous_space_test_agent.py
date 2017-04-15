@@ -48,7 +48,7 @@ EPS_ITERATIONS_ANNEAL = 1000000
 
 # Directory for storing tensorboard summary results
 SUMMARY_DIR = './results/tf_ddpg'
-RANDOM_SEED = 5320
+RANDOM_SEED = 6320
 # Size of replay buffer
 BUFFER_SIZE = 1000000
 MINIBATCH_SIZE = 1024
@@ -85,7 +85,7 @@ def main(_):
             # Connect to the server with the specified
             # feature set. See feature sets in hfo.py/hfo.hpp.
             hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
-                                'bin/teams/base/config/formations-dt', 6100,
+                                'bin/teams/base/config/formations-dt', 6200,
                                 'localhost', 'base_left', False)
 
             np.random.seed(RANDOM_SEED)
@@ -367,7 +367,7 @@ def main(_):
                         # writer.add_summary(summary_str, i)
                         # writer.flush()
 
-                        f = open(LOGPATH +'logging/logs29.txt', 'a')
+                        f = open(LOGPATH +'logging/logs30.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                             + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
