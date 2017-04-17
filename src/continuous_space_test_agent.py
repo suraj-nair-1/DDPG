@@ -48,7 +48,6 @@ EPS_ITERATIONS_ANNEAL = 1000000
 
 # Directory for storing tensorboard summary results
 SUMMARY_DIR = './results/tf_ddpg'
-RANDOM_SEED = 6320
 # Size of replay buffer
 BUFFER_SIZE = 1000000
 MINIBATCH_SIZE = 1024
@@ -72,6 +71,8 @@ ORACLE = False
 
 
 def main(_):
+    RANDOM_SEED = int(sys.argv[3])
+
     if GPUENABLED:
         device = "/gpu:0"
     else:
