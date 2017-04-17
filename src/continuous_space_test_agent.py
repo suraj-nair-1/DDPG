@@ -55,6 +55,7 @@ MINIBATCH_SIZE = 1024
 
 GPUENABLED = False
 ORACLE = False
+
 # ===========================
 #   Tensorflow Summary Ops
 # ===========================
@@ -85,19 +86,19 @@ def main(_):
             # Connect to the server with the specified
             # feature set. See feature sets in hfo.py/hfo.hpp.
             hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
-                                'bin/teams/base/config/formations-dt', 6200,
+                                'bin/teams/base/config/formations-dt', int(sys.argv[1]),
                                 'localhost', 'base_left', False)
 
             np.random.seed(RANDOM_SEED)
             tf.set_random_seed(RANDOM_SEED)
 
-            state_dim = 66
+            state_dim = 74
             action_dim = 10
             low_action_bound = np.array([0., -180., -180., -180., 0., -180.])
             high_action_bound = np.array([100., 180., 180., 180., 100., 180.])
 
             actor = ActorNetwork(sess, state_dim, action_dim, low_action_bound, \
-                high_action_bound, ACTOR_LEARNING_RATE, TAU, LOGPATH)
+                high_action_bound, ACTOR_LEARNING_RATE, TAU, LOGPATH, sys.argv[2])
 
             critic = CriticNetwork(sess, state_dim, action_dim, low_action_bound, high_action_bound, \
                 CRITIC_LEARNING_RATE, TAU, actor.get_num_trainable_vars(), MINIBATCH_SIZE)
@@ -267,7 +268,7 @@ def main(_):
                     # there are at least minibatch size samples
                     if (replay_buffer.size() > MINIBATCH_SIZE) and (ITERATIONS % 10 == 0):
 
-                        if (not PRIORITIZED) or (ITERATIONS < 200000) or (NUM_GOALS > 10):
+                        if (not PRIORITIZED) or (ITERATIONS < 200000) or (NUM_GOALS > 50):
                             s_batch, a_batch, r_batch, t_batch, s1_batch = \
                                 replay_buffer.sample_batch(MINIBATCH_SIZE)
                         else:
@@ -367,7 +368,7 @@ def main(_):
                         # writer.add_summary(summary_str, i)
                         # writer.flush()
 
-                        f = open(LOGPATH +'logging/logs30.txt', 'a')
+                        f = open(LOGPATH +'logging/logs31_' + str(sys.argv[2]) + '.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                             + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
