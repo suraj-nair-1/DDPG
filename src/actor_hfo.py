@@ -12,7 +12,7 @@ class ActorNetwork(object):
     The output layer activation is a tanh to keep the action
     between -2 and 2
     """
-    def __init__(self, sess, state_dim, action_dim, low_action_bound, high_action_bound, learning_rate, tau, LOGPATH):
+    def __init__(self, sess, state_dim, action_dim, low_action_bound, high_action_bound, learning_rate, tau, LOGPATH, playernum):
         self.sess = sess
         self.s_dim = state_dim
         self.a_dim = action_dim
@@ -21,6 +21,7 @@ class ActorNetwork(object):
         self.learning_rate = learning_rate
         self.tau = tau
         self.LOGPATH = LOGPATH
+        self.playernum = playernum
         # self.ou_noise_params = ou_noise_params
         # self.ou_noise = [r[1] for r in self.ou_noise_params]
 
@@ -95,7 +96,7 @@ class ActorNetwork(object):
     def save_model(self, iterationnum):
         # model = tflearn.DNN(self.target_scaled_out, session = self.sess)
         # print model
-        self.target_model.save(self.LOGPATH + "models/actor_run20_" + str(iterationnum)+".tflearn")
+        self.target_model.save(self.LOGPATH + "models/actor_run21_" + self.playernum + "_" + str(iterationnum)+".tflearn")
 
     def train(self, inputs, a_gradient):
         self.sess.run(self.optimize, feed_dict={

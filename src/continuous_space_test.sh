@@ -1,7 +1,9 @@
 #!/bin/bash
-./bin/HFO --frames-per-trial=500 --untouched-time=500 --offense-agents=1 --defense-npcs=1 --headless --fullstate --port 6200 --no-logging --seed 6320 &
+./bin/HFO --frames-per-trial=500 --untouched-time=500 --offense-agents=2 --defense-npcs=1 --no-sync --fullstate --port 6200 --no-logging --seed 6320 &
 sleep 5
-python ../DDPG/src/continuous_space_test_agent.py 6200 &
+python ../DDPG/src/continuous_space_test_agent.py 6200 1 &
+sleep 5
+python ../DDPG/src/continuous_space_test_agent.py 6200 2 &
 #python ~/git/DDPG/tflearn/continuous_space_test_agent.py 6000 &
 
 # sleep 5
