@@ -46,6 +46,9 @@ EPS_ITERATIONS_ANNEAL = 1000000
 
 # OU_NOISE_PARAMS = [[.1, 0.0, 3.0]] * 6
 
+
+
+
 # Directory for storing tensorboard summary results
 SUMMARY_DIR = './results/tf_ddpg'
 # Size of replay buffer
@@ -102,7 +105,7 @@ def main(_):
                 high_action_bound, ACTOR_LEARNING_RATE, TAU, LOGPATH, sys.argv[2])
 
             critic = CriticNetwork(sess, state_dim, action_dim, low_action_bound, high_action_bound, \
-                CRITIC_LEARNING_RATE, TAU, actor.get_num_trainable_vars(), MINIBATCH_SIZE)
+                CRITIC_LEARNING_RATE, TAU, actor.get_num_trainable_vars(), MINIBATCH_SIZE, LOGPATH)
 
             # Set up summary Ops
             sess.run(tf.global_variables_initializer())
@@ -353,7 +356,7 @@ def main(_):
                         critic.update_target_network()
 
                         if (ITERATIONS % 1000000) == 0:
-                            actor.save_model(ITERATIONS)
+                            actor.model_save("target_actor_25_" + str(iterationnum), target=True)
                         # break
                     ITERATIONS += 1
                     ep_reward += r
@@ -369,7 +372,7 @@ def main(_):
                         # writer.add_summary(summary_str, i)
                         # writer.flush()
 
-                        f = open(LOGPATH +'logging/logs33_' + str(sys.argv[2]) + '.txt', 'a')
+                        f = open(LOGPATH +'logging/logs34_' + str(sys.argv[2]) + '.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                             + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \

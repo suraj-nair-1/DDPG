@@ -39,15 +39,15 @@ def main(_):
     # Connect to the server with the specified
     # feature set. See feature sets in hfo.py/hfo.hpp.
     hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
-                        'bin/teams/base/config/formations-dt', 4200,
+                        'bin/teams/base/config/formations-dt', int(sys.argv[1]),
                         'localhost', 'base_left', False)
 
-    state_dim = 66
+    state_dim = 74
     action_dim = 10
     low_action_bound = np.array([0., -180., -180., -180., 0., -180.])
     high_action_bound = np.array([100., 180., 180., 180., 100., 180.])
 
-    actor = ActorNetworkReplay(state_dim, action_dim, "../DDPG/models/actor_run20_2000000.0.tflearn" )
+    actor = ActorNetworkReplay(state_dim, action_dim, "../DDPG/models/" +  sys.argv[2])
 
 
 
@@ -67,10 +67,12 @@ def main(_):
 
             # Added exploration noise
             s_noise = np.reshape(s, (1, state_dim)) #+ np.random.rand(1, 58)
+
+            print sys.argv[2], s[66:]
             # print s_noise
             a = actor.model_predict(s_noise)[0]
             # model_a = a\.predict(s_noise)[0]
-            print a
+            # print a
             index = np.argmax(a[:4])
             # model_index, model_a = model_actor.add_noise(model_a, 0)
             print "******************************"
@@ -88,7 +90,7 @@ def main(_):
             hfo.act(*action)
             # print "\n"
             terminal = hfo.step()
-            print terminal
+            # print terminal
 
 
 if __name__ == '__main__':

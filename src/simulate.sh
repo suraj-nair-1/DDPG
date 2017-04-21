@@ -1,9 +1,9 @@
 #!/bin/bash
 ./bin/HFO --frames-per-trial=500 --untouched-time=500 --offense-agents=2 --defense-npcs=1 --no-sync --fullstate --port 4200 &
 sleep 5
-python ../DDPG/src/simulate.py 4200 &
+python ../DDPG/src/simulate.py 4200 actor_run23_1_2000000.0.tflearn &
 sleep 5
-python ../DDPG/src/simulate.py 4200 &
+python ../DDPG/src/simulate.py 4200 actor_run23_2_2000000.0.tflearn &
 #python ~/git/DDPG/tflearn/continuous_space_test_agent.py 6000 &
 
 # sleep 5

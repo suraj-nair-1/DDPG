@@ -9,20 +9,21 @@ class CriticNetwork(object):
     Input to the network is the state and action, output is Q(s,a).
     The action must be obtained from the output of the Actor network.
     """
-    def __init__(self, sess, state_dim, action_dim, low_act_bound, high_act_bound, learning_rate, tau, num_actor_vars, MINIBATCH_SIZE):
+    def __init__(self, sess, state_dim, action_dim, low_act_bound, high_act_bound, learning_rate, tau, num_actor_vars, MINIBATCH_SIZE,LOGPATH):
         self.sess = sess
+        self.LOGPATH = LOGPATH
         self.s_dim = state_dim
         self.a_dim = action_dim
         self.learning_rate = learning_rate
         self.tau = tau
 
         # Create the critic network
-        self.inputs, self.action, self.out = self.create_critic_network()
+        self.inputs, self.action, self.out, self.model = self.create_critic_network()
 
         self.network_params = tf.trainable_variables()[num_actor_vars:]
 
         # Target Network
-        self.target_inputs, self.target_action, self.target_out = self.create_critic_network()
+        self.target_inputs, self.target_action, self.target_out, self.target_model = self.create_critic_network()
 
         self.target_network_params = tf.trainable_variables()[(len(self.network_params) + num_actor_vars):]
 
@@ -85,8 +86,22 @@ class CriticNetwork(object):
         w_init = tflearn.initializations.normal(stddev = -0.01)
         out = tflearn.fully_connected(l4a, 1, weights_init=w_init)
 
-        return inputs, action, out
+        model = tflearn.DNN(out, session = self.sess)
 
+        return inputs, action, out, model
+
+    def model_save(self, saveto, target):
+        if target:
+            self.target_model.save(self.LOGPATH + "models/"+saveto+".tflearn")
+        else:
+            self.model.save(self.LOGPATH + "models/"+saveto+".tflearn")
+
+
+    def model_load(self, loadfrom, target):
+        if target:
+            self.target_model.load(loadfrom, weights_only=False, create_new_session=False)
+        else:
+            self.model.load(loadfrom, weights_only=False, create_new_session=False)
 
     def train(self, inputs, action, predicted_q_value):
         return self.sess.run([self.out, self.loss, self.optimize], feed_dict={

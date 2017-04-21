@@ -1,2 +1,2 @@
-model_checkpoint_path: "/Users/surajnair/Documents/Tech/research/DDPG/models/test_save3000.0.tflearn"
-all_model_checkpoint_paths: "/Users/surajnair/Documents/Tech/research/DDPG/models/test_save3000.0.tflearn"
+model_checkpoint_path: "/Users/surajnair/Documents/Tech/research/DDPG/models/targetcloseractor.tflearn"
+all_model_checkpoint_paths: "/Users/surajnair/Documents/Tech/research/DDPG/models/targetcloseractor.tflearn"
