@@ -11,13 +11,15 @@ import numpy as np
 import tensorflow as tf
 import tflearn
 
+import time
+
 from replay_buffer import ReplayBuffer
 from actor_hfo import ActorNetwork
 from critic_hfo import CriticNetwork
 
 
-# LOGPATH = "../DDPG/"
-LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+LOGPATH = "../DDPG/"
+# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 
 PRIORITIZED = True
 
@@ -45,9 +47,6 @@ EPS_ITERATIONS_ANNEAL = 1000000
 #                    [5.0, 0.0, 3.0], [5.0, 0.0, 3.0], [5.0, 0.0, 3.0]]
 
 # OU_NOISE_PARAMS = [[.1, 0.0, 3.0]] * 6
-
-
-
 
 # Directory for storing tensorboard summary results
 SUMMARY_DIR = './results/tf_ddpg'
@@ -82,16 +81,26 @@ def main(_):
         device = "/cpu:0"
     with tf.device(device):
         with tf.Session() as sess:
-            ITERATIONS = 0.0
-            NUM_GOALS = 0.0
 
             # Create the HFO Environment
+            # print "A"
             hfo = HFOEnvironment()
+            # print "AA"
             # Connect to the server with the specified
             # feature set. See feature sets in hfo.py/hfo.hpp.
             hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
                                 'bin/teams/base/config/formations-dt', int(sys.argv[1]),
                                 'localhost', 'base_left', False)
+            ITERATIONS = 0.0
+            NUM_GOALS = 0.0
+            CURR_MODEL = int(sys.argv[2])
+            PLAYER = int(sys.argv[2])
+            if PLAYER == 1:
+                OTHERPLAYER = 2
+            else:
+                OTHERPLAYER = 1
+
+            # print "AAAA"
 
             np.random.seed(RANDOM_SEED)
             tf.set_random_seed(RANDOM_SEED)
@@ -115,7 +124,13 @@ def main(_):
             critic.update_target_network()
 
             # Initialize replay memory
-            replay_buffer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED)
+            replay_buffer_closer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED)
+            replay_buffer_farther = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED)
+            if PLAYER == 1:
+                replay_buffer = replay_buffer_closer
+            else:
+                replay_buffer = replay_buffer_farther
+
 
             for i in xrange(MAX_EPISODES):
 
@@ -153,40 +168,8 @@ def main(_):
                     # print s_noise
                     a = actor.predict(s_noise)[0]
 
-                    # ball_angle_sin = s[51]
-                    # ang = np.degrees(np.arcsin(ball_angle_sin))
-
-                    # oracle = np.random.uniform()
-                    # oracle = 0.8 # No oracle
-                    # if oracle < 0.25:
-                    #     # print ang
-                    #     a = np.array([1, 0, 0, 0, 10, ang, 0, 0, 0, 0])
-                    #     index = 0
-                    # elif oracle >= 0.25 and oracle < 0.5:
-                    #     if ang > 0:
-                    #         bad_ang = ang - 180
-                    #     else:
-                    #         bad_ang = ang + 180
-                    #     a = np.array([1, 0, 0, 0, 10, bad_ang, 0, 0, 0, 0])
-                    #     index = 0
-                    # else:
                     index, a = actor.add_noise(a, max(0.1, EPS_GREEDY_INIT - ITERATIONS / EPS_ITERATIONS_ANNEAL))
 
-                    # if replay_buffer.size() > MINIBATCH_SIZE:
-                    # index, a = actor.add_noise(a, max(0.1, EPS_GREEDY_INIT - ITERATIONS / EPS_ITERATIONS_ANNEAL))
-                        # for ind, item in enumerate(a[4:]):
-                        #     a[ind+4] = max(low_action_bound[ind], min(a[ind+4], high_action_bound[ind]))
-                        # index = np.argmax(a[:4])
-                    # else:
-                    #     index = np.random.choice(4, 1000, p=a[:4])[0]
-                        # index = 0
-                        # a[4] = np.random.uniform(0, 100)
-                        # a[5] = np.random.uniform(-180, 180)
-                        # print index
-                    # a += np.random.rand(10)
-                    # index = np.argmax(a[:4])
-                    # print a
-                    # print index
 
                     if index == 0:
                         action  = (DASH, a[4], a[5])
@@ -210,8 +193,16 @@ def main(_):
                     # curr_ball_prox = 1 - 2*(np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[1])**2) / np.sqrt(20))
                     # curr_goal_dist = np.sqrt((s1[3] - 1)**2 + (s1[4])**2)
                     # curr_kickable = s[5]
+                    # if PLAYER == 1:
+                    #     print s1[66:]
 
                     curr_ball_prox = s1[53]
+
+                    f = open(LOGPATH+'intermediate'+str(PLAYER)+'.txt', 'w')
+                    f.write(str(curr_ball_prox))
+                    f.close()
+                    # print PLAYER, curr_ball_prox
+
                     curr_kickable = s1[12]
 
                     goal_proximity = s1[15]
@@ -263,13 +254,67 @@ def main(_):
                     # if r == 0:
                     #     r = -1
                     # print "Current Reward", r
+                    
 
 
                     replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r, \
                         terminal, np.reshape(s1, (actor.s_dim,)))
 
+
+                    # Determine Model Switching
+                    otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
+                    # try:
+                    #     otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
+                    # except:
+                    #     time.sleep(5)
+                    #     otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
+
+                    # print
+                    print "PLAYER", PLAYER, "CURR_MODEL", CURR_MODEL
+                    # print otherprox
+                    if otherprox < old_ball_prox:
+                        if CURR_MODEL == 2:
+                            actor.model_save("targetfartheractor", target=True)
+                            actor.model_save("fartheractor", target=False)
+                            critic.model_save("targetfarthercritic", target=True)
+                            critic.model_save("farthercritic", target=False)
+                            actor.model_load(LOGPATH + "models/targetcloseractor.tflearn", target=True)
+                            actor.model_load(LOGPATH + "models/closeractor.tflearn", target=False)
+                            critic.model_load(LOGPATH + "models/targetclosercritic.tflearn", target=True)
+                            critic.model_load(LOGPATH + "models/closercritic.tflearn", target=False)
+                            # print sess
+
+                            replay_buffer = replay_buffer_closer
+
+                            CURR_MODEL = 1
+
+                            
+                        
+                    else:
+                        if CURR_MODEL == 1:
+                            actor.model_save("targetcloseractor", target=True)
+                            actor.model_save("closeractor", target=False)
+                            critic.model_save("targetclosercritic", target=True)
+                            critic.model_save("closercritic", target=False)
+                            actor.model_load(LOGPATH+"models/targetfartheractor.tflearn", target=True)
+                            actor.model_load(LOGPATH+"models/fartheractor.tflearn", target=False)
+                            critic.model_load(LOGPATH+"models/targetfarthercritic.tflearn", target=True)
+                            critic.model_load(LOGPATH+"models/farthercritic.tflearn", target=False)
+                            # print sess
+
+                            replay_buffer = replay_buffer_farther
+
+                            CURR_MODEL = 2
+                    # print sess
+
+                            
+                            
+                    # print "______________________________"
+
                     # Keep adding experience to the memory until
                     # there are at least minibatch size samples
+                    # TRAINING STEP
+                    ###########################################################
                     if (replay_buffer.size() > MINIBATCH_SIZE) and (ITERATIONS % 10 == 0):
 
                         if (not PRIORITIZED) or (ITERATIONS < 200000) or (NUM_GOALS > 50):
@@ -281,15 +326,6 @@ def main(_):
 
                         ep_updates += 1
 
-                        # print "REPLAY SIZE ", replay_buffer.size()
-
-                        # Calculate targets
-                        # print s1_batch
-                        # print s1_batch.shape
-                        # print s1_batch.dtype
-                        # print s1_batch.shape
-                        # print actor.predict_target(s1_batch)
-                        # print s_batch.shape
                         # print actor.predict_target(s_batch).shape
                         good_batch = []
                         bad_batch = []
@@ -356,23 +392,20 @@ def main(_):
                         critic.update_target_network()
 
                         if (ITERATIONS % 1000000) == 0:
-                            actor.model_save("target_actor_25_" + str(iterationnum), target=True)
+                            if CURR_MODEL == 2:
+                                actor.model_save("targetfarther"+str(ITERATIONS), target=True)
+                            else:
+                                actor.model_save("targetcloser"+str(ITERATIONS), target=True)
                         # break
                     ITERATIONS += 1
                     ep_reward += r
 
+                    # EPISODE IS OVER
+                    ###########################################################
                     if terminal:
                         print terminal
 
-                        # summary_str = sess.run(summary_ops, feed_dict={
-                        #     summary_vars[0]: ep_reward,
-                        #     summary_vars[1]: ep_ave_max_q / float(j+1)
-                        # })
-
-                        # writer.add_summary(summary_str, i)
-                        # writer.flush()
-
-                        f = open(LOGPATH +'logging/logs34_' + str(sys.argv[2]) + '.txt', 'a')
+                        f = open(LOGPATH +'logging/logs34_' + str(PLAYER) + '.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                             + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
@@ -385,8 +418,6 @@ def main(_):
                             '| Qmax:',  (ep_ave_max_q / float(j+1)), ' | Critic Loss: ', float(critic_loss)/ float(j+1))
 
                         break
-                # print "FINISH"
-                # break
 
 if __name__ == '__main__':
     tf.app.run()

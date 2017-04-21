@@ -93,10 +93,18 @@ class ActorNetwork(object):
     #         self.model.load(loadfrom)
     #         self.target_model.load(loadfrom)
 
-    def save_model(self, iterationnum):
-        # model = tflearn.DNN(self.target_scaled_out, session = self.sess)
-        # print model
-        self.target_model.save(self.LOGPATH + "models/actor_run23_" + self.playernum + "_" + str(iterationnum)+".tflearn")
+
+    def model_save(self, saveto, target):
+        if target:
+            self.target_model.save(self.LOGPATH + "models/"+saveto+".tflearn")
+        else:
+            self.model.save(self.LOGPATH + "models/"+saveto+".tflearn")
+
+    def model_load(self, loadfrom, target):
+        if target:
+            self.target_model.load(loadfrom, weights_only=False, create_new_session=False)
+        else:
+            self.model.load(loadfrom, weights_only=False, create_new_session=False)
 
     def train(self, inputs, a_gradient):
         self.sess.run(self.optimize, feed_dict={
