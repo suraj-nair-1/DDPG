@@ -262,15 +262,15 @@ def main(_):
 
 
                     # Determine Model Switching
-                    otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
-                    # try:
-                    #     otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
-                    # except:
-                    #     time.sleep(5)
-                    #     otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
+                    # otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
+                    try:
+                        otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
+                    except:
+                        time.sleep(2)
+                        otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
 
                     # print
-                    print "PLAYER", PLAYER, "CURR_MODEL", CURR_MODEL
+                    # print "PLAYER", PLAYER, "CURR_MODEL", CURR_MODEL
                     # print otherprox
                     if otherprox < old_ball_prox:
                         if CURR_MODEL == 2:
@@ -405,7 +405,7 @@ def main(_):
                     if terminal:
                         print terminal
 
-                        f = open(LOGPATH +'logging/logs34_' + str(PLAYER) + '.txt', 'a')
+                        f = open(LOGPATH +'logging/logs35_' + str(PLAYER) + '.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                             + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
