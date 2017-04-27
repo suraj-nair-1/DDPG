@@ -275,13 +275,15 @@ def main(_):
                     # print "PLAYER", PLAYER, "CURR_MODEL", CURR_MODEL
                     # print otherprox
                     if otherprox < old_ball_prox:
-                        os.delete(LOGPATH+"models/targetfartheractor.*")
-                        os.delete(LOGPATH+"models/fartheractor.*")
-                        os.delete(LOGPATH+"models/targetfarthercritic.*")
-                        os.delete(LOGPATH+"models/farthercritic.*")
-
-
                         if CURR_MODEL == 2:
+                            try:
+                                os.remove(LOGPATH+"models/targetfartheractor.*")
+                                os.remove(LOGPATH+"models/fartheractor.*")
+                                os.remove(LOGPATH+"models/targetfarthercritic.*")
+                                os.remove(LOGPATH+"models/farthercritic.*")
+                            except:
+                                "Delete Failed"
+                                
                             actor.model_save("targetfartheractor", target=True)
                             actor.model_save("fartheractor", target=False)
                             critic.model_save("targetfarthercritic", target=True)
@@ -306,10 +308,14 @@ def main(_):
                         
                     else:
                         if CURR_MODEL == 1:
-                            os.delete(LOGPATH+"models/targetcloseractor.*")
-                            os.delete(LOGPATH+"models/closeractor.*")
-                            os.delete(LOGPATH+"models/targetclosercritic.*")
-                            os.delete(LOGPATH+"models/closercritic.*")
+                            try
+                                os.remove(LOGPATH+"models/targetcloseractor.*")
+                                os.remove(LOGPATH+"models/closeractor.*")
+                                os.remove(LOGPATH+"models/targetclosercritic.*")
+                                os.remove(LOGPATH+"models/closercritic.*")
+                            except:
+                                "Delete Failed"
+
 
                             actor.model_save("targetcloseractor", target=True)
                             actor.model_save("closeractor", target=False)
