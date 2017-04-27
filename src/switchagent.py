@@ -282,8 +282,8 @@ def main(_):
                                 os.remove(LOGPATH+"models/targetfarthercritic.*")
                                 os.remove(LOGPATH+"models/farthercritic.*")
                             except:
-                                "Delete Failed"
-                                
+                                print "Delete Failed"
+
                             actor.model_save("targetfartheractor", target=True)
                             actor.model_save("fartheractor", target=False)
                             critic.model_save("targetfarthercritic", target=True)
@@ -308,13 +308,13 @@ def main(_):
                         
                     else:
                         if CURR_MODEL == 1:
-                            try
+                            try:
                                 os.remove(LOGPATH+"models/targetcloseractor.*")
                                 os.remove(LOGPATH+"models/closeractor.*")
                                 os.remove(LOGPATH+"models/targetclosercritic.*")
                                 os.remove(LOGPATH+"models/closercritic.*")
                             except:
-                                "Delete Failed"
+                                print "Delete Failed"
 
 
                             actor.model_save("targetcloseractor", target=True)
