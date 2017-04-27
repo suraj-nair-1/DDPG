@@ -10,6 +10,7 @@ from hfo import *
 import numpy as np
 import tensorflow as tf
 import tflearn
+import os
 
 import time
 
@@ -18,8 +19,8 @@ from actor_hfo import ActorNetwork
 from critic_hfo import CriticNetwork
 
 
-LOGPATH = "../DDPG/"
-# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+# LOGPATH = "../DDPG/"
+LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 
 PRIORITIZED = True
 
@@ -263,25 +264,38 @@ def main(_):
 
                     # Determine Model Switching
                     # otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
-                    try:
-                        otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
-                    except:
-                        time.sleep(2)
-                        otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
+                    while True:
+                        try:
+                            otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
+                            break
+                        except:
+                            continue
 
                     # print
                     # print "PLAYER", PLAYER, "CURR_MODEL", CURR_MODEL
                     # print otherprox
                     if otherprox < old_ball_prox:
+                        os.delete(LOGPATH+"models/targetfartheractor.*")
+                        os.delete(LOGPATH+"models/fartheractor.*")
+                        os.delete(LOGPATH+"models/targetfarthercritic.*")
+                        os.delete(LOGPATH+"models/farthercritic.*")
+
+
                         if CURR_MODEL == 2:
                             actor.model_save("targetfartheractor", target=True)
                             actor.model_save("fartheractor", target=False)
                             critic.model_save("targetfarthercritic", target=True)
                             critic.model_save("farthercritic", target=False)
-                            actor.model_load(LOGPATH + "models/targetcloseractor.tflearn", target=True)
-                            actor.model_load(LOGPATH + "models/closeractor.tflearn", target=False)
-                            critic.model_load(LOGPATH + "models/targetclosercritic.tflearn", target=True)
-                            critic.model_load(LOGPATH + "models/closercritic.tflearn", target=False)
+
+                            while True:
+                                try:
+                                    actor.model_load(LOGPATH + "models/targetcloseractor.tflearn", target=True)
+                                    actor.model_load(LOGPATH + "models/closeractor.tflearn", target=False)
+                                    critic.model_load(LOGPATH + "models/targetclosercritic.tflearn", target=True)
+                                    critic.model_load(LOGPATH + "models/closercritic.tflearn", target=False)
+                                    break
+                                except:
+                                    continue
                             # print sess
 
                             replay_buffer = replay_buffer_closer
@@ -292,14 +306,25 @@ def main(_):
                         
                     else:
                         if CURR_MODEL == 1:
+                            os.delete(LOGPATH+"models/targetcloseractor.*")
+                            os.delete(LOGPATH+"models/closeractor.*")
+                            os.delete(LOGPATH+"models/targetclosercritic.*")
+                            os.delete(LOGPATH+"models/closercritic.*")
+
                             actor.model_save("targetcloseractor", target=True)
                             actor.model_save("closeractor", target=False)
                             critic.model_save("targetclosercritic", target=True)
                             critic.model_save("closercritic", target=False)
-                            actor.model_load(LOGPATH+"models/targetfartheractor.tflearn", target=True)
-                            actor.model_load(LOGPATH+"models/fartheractor.tflearn", target=False)
-                            critic.model_load(LOGPATH+"models/targetfarthercritic.tflearn", target=True)
-                            critic.model_load(LOGPATH+"models/farthercritic.tflearn", target=False)
+
+                            while True:
+                                try:
+                                    actor.model_load(LOGPATH+"models/targetfartheractor.tflearn", target=True)
+                                    actor.model_load(LOGPATH+"models/fartheractor.tflearn", target=False)
+                                    critic.model_load(LOGPATH+"models/targetfarthercritic.tflearn", target=True)
+                                    critic.model_load(LOGPATH+"models/farthercritic.tflearn", target=False)
+                                    break
+                                except:
+                                    continue
                             # print sess
 
                             replay_buffer = replay_buffer_farther
@@ -393,9 +418,9 @@ def main(_):
 
                         if (ITERATIONS % 1000000) == 0:
                             if CURR_MODEL == 2:
-                                actor.model_save("targetfarther"+str(ITERATIONS), target=True)
+                                actor.model_save("targetfarther1_"+str(ITERATIONS), target=True)
                             else:
-                                actor.model_save("targetcloser"+str(ITERATIONS), target=True)
+                                actor.model_save("targetcloser1_"+str(ITERATIONS), target=True)
                         # break
                     ITERATIONS += 1
                     ep_reward += r
@@ -405,7 +430,7 @@ def main(_):
                     if terminal:
                         print terminal
 
-                        f = open(LOGPATH +'logging/logs35_' + str(PLAYER) + '.txt', 'a')
+                        f = open(LOGPATH +'logging/logs36_' + str(PLAYER) + '.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                             + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
