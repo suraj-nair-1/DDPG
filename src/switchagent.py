@@ -55,7 +55,7 @@ SUMMARY_DIR = './results/tf_ddpg'
 BUFFER_SIZE = 1000000
 MINIBATCH_SIZE = 1024
 
-GPUENABLED = False
+GPUENABLED = True
 ORACLE = False
 
 # ===========================
@@ -444,9 +444,9 @@ def main(_):
 
                         if (ITERATIONS % 1000000) == 0:
                             if CURR_MODEL == 2:
-                                actor.model_save("targetfarther1_"+str(ITERATIONS), target=True)
+                                actor.model_save("targetfarther2_"+str(ITERATIONS), target=True)
                             else:
-                                actor.model_save("targetcloser1_"+str(ITERATIONS), target=True)
+                                actor.model_save("targetcloser2_"+str(ITERATIONS), target=True)
                         # break
                     ITERATIONS += 1
                     ep_reward += r
@@ -456,7 +456,7 @@ def main(_):
                     if terminal:
                         print terminal
 
-                        f = open(LOGPATH +'logging/logs36_' + str(PLAYER) + '.txt', 'a')
+                        f = open(LOGPATH +'logging/logs37_' + str(PLAYER) + '.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                             + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
