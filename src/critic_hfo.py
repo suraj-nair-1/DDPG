@@ -99,9 +99,9 @@ class CriticNetwork(object):
 
     def model_load(self, loadfrom, target):
         if target:
-            self.target_model.load(loadfrom, weights_only=False, create_new_session=False)
+            self.target_model.load(loadfrom, weights_only=True, create_new_session=False)
         else:
-            self.model.load(loadfrom, weights_only=False, create_new_session=False)
+            self.model.load(loadfrom, weights_only=True, create_new_session=False)
 
     def train(self, inputs, action, predicted_q_value):
         return self.sess.run([self.out, self.loss, self.optimize], feed_dict={
