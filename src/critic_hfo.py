@@ -92,9 +92,9 @@ class CriticNetwork(object):
 
     def model_save(self, saveto, target):
         if target:
-            self.target_model.save(self.LOGPATH + "models/"+saveto+".tflearn")
+            self.target_model.save(saveto)
         else:
-            self.model.save(self.LOGPATH + "models/"+saveto+".tflearn")
+            self.model.save(saveto)
 
 
     def model_load(self, loadfrom, target):

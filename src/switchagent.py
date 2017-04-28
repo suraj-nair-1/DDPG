@@ -156,6 +156,7 @@ def main(_):
                 # print "********************"
                 # print "Episode", i
                 # print "********************"
+                ep_switches  = 0.0
 
                 for j in xrange(MAX_EP_STEPS):
 
@@ -267,7 +268,8 @@ def main(_):
                     while True:
                         try:
                             otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
-                            break
+                            if len(otherprox.shape) == 0:
+                                break
                         except:
                             continue
 
@@ -276,25 +278,29 @@ def main(_):
                     # print otherprox
                     if otherprox < old_ball_prox:
                         if CURR_MODEL == 2:
+                            print "REMOVING OLD"
+                            ep_switches += 1
+
                             try:
-                                os.remove(LOGPATH+"models/targetfartheractor.*")
-                                os.remove(LOGPATH+"models/fartheractor.*")
-                                os.remove(LOGPATH+"models/targetfarthercritic.*")
-                                os.remove(LOGPATH+"models/farthercritic.*")
+                                for dr in os.listdir(LOGPATH+"intermodel/"):
+                                    if "farther" in dr:
+                                        os.remove(LOGPATH+"intermodel/"+dr)
                             except:
                                 print "Delete Failed"
 
-                            actor.model_save("targetfartheractor", target=True)
-                            actor.model_save("fartheractor", target=False)
-                            critic.model_save("targetfarthercritic", target=True)
-                            critic.model_save("farthercritic", target=False)
+                            print "SAVING NEW"
+                            actor.model_save(LOGPATH+"intermodel/targetfartheractor.tflearn", target=True)
+                            actor.model_save(LOGPATH+"intermodel/fartheractor.tflearn", target=False)
+                            critic.model_save(LOGPATH+"intermodel/targetfarthercritic.tflearn", target=True)
+                            critic.model_save(LOGPATH+"intermodel/farthercritic.tflearn", target=False)
 
+                            print "LOADING NEW"
                             while True:
                                 try:
-                                    actor.model_load(LOGPATH + "models/targetcloseractor.tflearn", target=True)
-                                    actor.model_load(LOGPATH + "models/closeractor.tflearn", target=False)
-                                    critic.model_load(LOGPATH + "models/targetclosercritic.tflearn", target=True)
-                                    critic.model_load(LOGPATH + "models/closercritic.tflearn", target=False)
+                                    actor.model_load(LOGPATH + "intermodel/targetcloseractor.tflearn", target=True)
+                                    actor.model_load(LOGPATH + "intermodel/closeractor.tflearn", target=False)
+                                    critic.model_load(LOGPATH + "intermodel/targetclosercritic.tflearn", target=True)
+                                    critic.model_load(LOGPATH + "intermodel/closercritic.tflearn", target=False)
                                     break
                                 except:
                                     continue
@@ -308,26 +314,28 @@ def main(_):
                         
                     else:
                         if CURR_MODEL == 1:
+                            print "REMOVING OLD"
+                            ep_switches += 1
                             try:
-                                os.remove(LOGPATH+"models/targetcloseractor.*")
-                                os.remove(LOGPATH+"models/closeractor.*")
-                                os.remove(LOGPATH+"models/targetclosercritic.*")
-                                os.remove(LOGPATH+"models/closercritic.*")
+                                for dr in os.listdir(LOGPATH+"intermodel/"):
+                                    if "closer" in dr:
+                                        os.remove(LOGPATH+"intermodel/"+dr)
                             except:
                                 print "Delete Failed"
 
+                            print "SAVING NEW"
+                            actor.model_save(LOGPATH+"intermodel/targetcloseractor.tflearn", target=True)
+                            actor.model_save(LOGPATH+"intermodel/closeractor.tflearn", target=False)
+                            critic.model_save(LOGPATH+"intermodel/targetclosercritic.tflearn", target=True)
+                            critic.model_save(LOGPATH+"intermodel/closercritic.tflearn", target=False)
 
-                            actor.model_save("targetcloseractor", target=True)
-                            actor.model_save("closeractor", target=False)
-                            critic.model_save("targetclosercritic", target=True)
-                            critic.model_save("closercritic", target=False)
-
+                            print "LOADING NEW"
                             while True:
                                 try:
-                                    actor.model_load(LOGPATH+"models/targetfartheractor.tflearn", target=True)
-                                    actor.model_load(LOGPATH+"models/fartheractor.tflearn", target=False)
-                                    critic.model_load(LOGPATH+"models/targetfarthercritic.tflearn", target=True)
-                                    critic.model_load(LOGPATH+"models/farthercritic.tflearn", target=False)
+                                    actor.model_load(LOGPATH+"intermodel/targetfartheractor.tflearn", target=True)
+                                    actor.model_load(LOGPATH+"intermodel/fartheractor.tflearn", target=False)
+                                    critic.model_load(LOGPATH+"intermodel/targetfarthercritic.tflearn", target=True)
+                                    critic.model_load(LOGPATH+"intermodel/farthercritic.tflearn", target=False)
                                     break
                                 except:
                                     continue
@@ -442,7 +450,7 @@ def main(_):
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
                             "," + str(ep_good_q / float(ep_updates+1)) + "," + str(ep_bad_q / float(ep_updates+1))\
                             + "," + str(ep_move_q / float(ep_updates+1)) + "," + str(ep_turn_q / float(ep_updates+1))\
-                            + "," + str(ep_tackle_q / float(ep_updates+1)) + "," + str(ep_kick_q / float(ep_updates+1)) + "\n")
+                            + "," + str(ep_tackle_q / float(ep_updates+1)) + "," + str(ep_kick_q / float(ep_updates+1)) + "," + str(ep_switches) + "\n")
                         f.close()
 
                         print('| Reward: ' , float(ep_reward), " | Episode", i, \
