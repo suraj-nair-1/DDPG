@@ -299,7 +299,7 @@ def main(_):
                                 try:
                                     try:
                                         for dr in os.listdir(LOGPATH+"intermodel/"):
-                                            if ("closer" in dr) and ("meta" in dr):
+                                            if ("closer" in dr) and ("meta" in dr) and ("meta." not in dr):
                                                 os.remove(LOGPATH+"intermodel/"+dr)
                                     except:
                                         print "Delete 2 Failed"
@@ -340,7 +340,7 @@ def main(_):
                                 try:
                                     try:
                                         for dr in os.listdir(LOGPATH+"intermodel/"):
-                                            if ("farther" in dr) and ("meta" in dr):
+                                            if ("farther" in dr) and ("meta" in dr) and ("meta." not in dr):
                                                 os.remove(LOGPATH+"intermodel/"+dr)
                                     except:
                                         print "Delete 2 Failed"
