@@ -297,6 +297,12 @@ def main(_):
                             print "LOADING NEW"
                             while True:
                                 try:
+                                    try:
+                                        for dr in os.listdir(LOGPATH+"intermodel/"):
+                                            if ("closer" in dr) and ("meta" in dr):
+                                                os.remove(LOGPATH+"intermodel/"+dr)
+                                    except:
+                                        print "Delete 2 Failed"
                                     actor.model_load(LOGPATH + "intermodel/targetcloseractor.tflearn", target=True)
                                     actor.model_load(LOGPATH + "intermodel/closeractor.tflearn", target=False)
                                     critic.model_load(LOGPATH + "intermodel/targetclosercritic.tflearn", target=True)
@@ -332,6 +338,12 @@ def main(_):
                             print "LOADING NEW"
                             while True:
                                 try:
+                                    try:
+                                        for dr in os.listdir(LOGPATH+"intermodel/"):
+                                            if ("farther" in dr) and ("meta" in dr):
+                                                os.remove(LOGPATH+"intermodel/"+dr)
+                                    except:
+                                        print "Delete 2 Failed"
                                     actor.model_load(LOGPATH+"intermodel/targetfartheractor.tflearn", target=True)
                                     actor.model_load(LOGPATH+"intermodel/fartheractor.tflearn", target=False)
                                     critic.model_load(LOGPATH+"intermodel/targetfarthercritic.tflearn", target=True)
