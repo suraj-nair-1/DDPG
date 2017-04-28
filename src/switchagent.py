@@ -55,7 +55,7 @@ SUMMARY_DIR = './results/tf_ddpg'
 BUFFER_SIZE = 1000000
 MINIBATCH_SIZE = 1024
 
-GPUENABLED = True
+GPUENABLED = False
 ORACLE = False
 
 # ===========================
