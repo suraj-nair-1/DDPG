@@ -113,7 +113,7 @@ def main(_):
             critic_closer = CriticNetwork(sess, state_dim, action_dim, low_action_bound, high_action_bound, \
                 CRITIC_LEARNING_RATE, TAU, actor_closer.get_num_trainable_vars(), MINIBATCH_SIZE, LOGPATH)
 
-            
+
             actor_farther = ActorNetwork(sess, state_dim, action_dim, low_action_bound, \
                 high_action_bound, ACTOR_LEARNING_RATE, TAU, LOGPATH, sys.argv[2])
 
@@ -293,7 +293,7 @@ def main(_):
                             actor = actor_closer
                             critic = critic_closer
                             replay_buffer = replay_buffer_closer
-
+                            ep_switches += 1
                             CURR_MODEL = 1
 
                             
@@ -303,7 +303,7 @@ def main(_):
                             actor = actor_farther
                             critic = critic_farther
                             replay_buffer = replay_buffer_farther
-
+                            ep_switches += 1
                             CURR_MODEL = 2
                     # print sess
 
