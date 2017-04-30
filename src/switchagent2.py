@@ -393,7 +393,7 @@ def main(_):
 
                         if (ITERATIONS % 1000000) == 0:
                                 actor_farther.model_save(LOGPATH + "models/targetfarther1_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
-                                actor_closer.model_save(LOGPATH "models/targetcloser1_"+str(PLAYER)+"_"str(ITERATIONS)+".tflearn", target=True)
+                                actor_closer.model_save(LOGPATH "models/targetcloser1_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
                         # break
                     ITERATIONS += 1
                     ep_reward += r
