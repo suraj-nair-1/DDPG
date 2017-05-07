@@ -215,7 +215,9 @@ def main(_):
                     f = open(LOGPATH+'intermediate1'+str(PLAYER)+'.txt', 'w')
                     f.write(str(curr_ball_prox))
                     f.close()
+
                     # print PLAYER, curr_ball_prox
+
 
                     curr_kickable = s1[12]
 
@@ -245,6 +247,17 @@ def main(_):
                     r = 0.0
                     # print j
                     if j != 0:
+                        f = open(LOGPATH+'intermediate_delta1'+str(PLAYER)+'.txt', 'w')
+                        f.write(str(curr_ball_prox - old_ball_prox))
+                        f.close()
+                        while True:
+                            try:
+                                otherdelta = np.loadtxt(LOGPATH + "intermediate_delta1"+str(OTHERPLAYER)+".txt", delimiter=",")
+                                if len(otherprox.shape) == 0:
+                                    break
+                            except:
+                                continue
+
                         # If game has finished, calculate reward based on whether or not a goal was scored
                         if terminal != IN_GAME:
                             if int(terminal) == 1:
@@ -252,7 +265,7 @@ def main(_):
                                 r += 5
                         else:
                             # Else calculate reward as distance between ball and goal
-                            r += curr_ball_prox - old_ball_prox
+                            r += max(curr_ball_prox - old_ball_prox, otherdelta)
                             # print r
                             r += -3.0 * (curr_goal_dist - old_goal_dist)
                             # print r
@@ -284,7 +297,6 @@ def main(_):
                                 break
                         except:
                             continue
-
                     # print
                     # print "PLAYER", PLAYER, "CURR_MODEL", CURR_MODEL
                     # print otherprox
@@ -392,8 +404,8 @@ def main(_):
                         critic.update_target_network()
 
                         if (ITERATIONS % 1000000) == 0:
-                                actor_farther.model_save(LOGPATH + "models/targetfarther2_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
-                                actor_closer.model_save(LOGPATH + "models/targetcloser2_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                actor_farther.model_save(LOGPATH + "models/targetfarther3_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                actor_closer.model_save(LOGPATH + "models/targetcloser3_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
                         # break
                     ITERATIONS += 1
                     ep_reward += r
@@ -403,7 +415,7 @@ def main(_):
                     if terminal:
                         print terminal
 
-                        f = open(LOGPATH +'logging/logs40_' + str(PLAYER) + '.txt', 'a')
+                        f = open(LOGPATH +'logging/logs41_' + str(PLAYER) + '.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                             + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
