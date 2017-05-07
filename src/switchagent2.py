@@ -212,7 +212,7 @@ def main(_):
 
                     curr_ball_prox = s1[53]
 
-                    f = open(LOGPATH+'intermediate1'+str(PLAYER)+'.txt', 'w')
+                    f = open(LOGPATH+'intermediate2'+str(PLAYER)+'.txt', 'w')
                     f.write(str(curr_ball_prox))
                     f.close()
 
@@ -247,12 +247,12 @@ def main(_):
                     r = 0.0
                     # print j
                     if j != 0:
-                        f = open(LOGPATH+'intermediate_delta1'+str(PLAYER)+'.txt', 'w')
+                        f = open(LOGPATH+'intermediate_delta2'+str(PLAYER)+'.txt', 'w')
                         f.write(str(curr_ball_prox - old_ball_prox))
                         f.close()
                         while True:
                             try:
-                                otherdelta = np.loadtxt(LOGPATH + "intermediate_delta1"+str(OTHERPLAYER)+".txt", delimiter=",")
+                                otherdelta = np.loadtxt(LOGPATH + "intermediate_delta2"+str(OTHERPLAYER)+".txt", delimiter=",")
                                 if len(otherprox.shape) == 0:
                                     break
                             except:
@@ -292,7 +292,7 @@ def main(_):
                     # otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
                     while True:
                         try:
-                            otherprox = np.loadtxt(LOGPATH + "intermediate1"+str(OTHERPLAYER)+".txt", delimiter=",")
+                            otherprox = np.loadtxt(LOGPATH + "intermediate2"+str(OTHERPLAYER)+".txt", delimiter=",")
                             if len(otherprox.shape) == 0:
                                 break
                         except:
