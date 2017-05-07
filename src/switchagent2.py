@@ -404,8 +404,8 @@ def main(_):
                         critic.update_target_network()
 
                         if (ITERATIONS % 1000000) == 0:
-                                actor_farther.model_save(LOGPATH + "models/targetfarther3_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
-                                actor_closer.model_save(LOGPATH + "models/targetcloser3_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                actor_farther.model_save(LOGPATH + "models/targetfarther4_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                actor_closer.model_save(LOGPATH + "models/targetcloser4_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
                         # break
                     ITERATIONS += 1
                     ep_reward += r
@@ -415,7 +415,7 @@ def main(_):
                     if terminal:
                         print terminal
 
-                        f = open(LOGPATH +'logging/logs41_' + str(PLAYER) + '.txt', 'a')
+                        f = open(LOGPATH +'logging/logs42_' + str(PLAYER) + '.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                             + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
