@@ -29,9 +29,9 @@ class ActorNetworkReplay(object):
         self.choice_probs = tflearn.activations.softmax(self.choice)
         self.scaled_out = tflearn.merge([self.choice_probs, self.params], 'concat')
         self.model = tflearn.DNN(self.scaled_out)
-        print self.model.get_weights(self.l.W)
+        # print self.model.get_weights(self.l.W)
         self.model.load(loadfrom)
-        print self.model.get_weights(self.l.W)
+        # print self.model.get_weights(self.l.W)
 
     def model_load(self, loadfrom):
         self.model.load(loadfrom)
