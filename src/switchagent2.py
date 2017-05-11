@@ -19,8 +19,8 @@ from actor_hfo import ActorNetwork
 from critic_hfo import CriticNetwork
 
 
-# LOGPATH = "../DDPG/"
-LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+LOGPATH = "../DDPG/"
+# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 
 PRIORITIZED = True
 
@@ -211,15 +211,23 @@ def main(_):
                     #     print s1[66:]
 
                     curr_ball_prox = s1[53]
+                    curr_kickable = s1[12]
 
-                    f = open(LOGPATH+'intermediate2'+str(PLAYER)+'.txt', 'w')
-                    f.write(str(curr_ball_prox))
-                    f.close()
+                    send_data  = np.array([curr_ball_prox, curr_kickable])
+                    np.savetxt(LOGPATH+'intermediate1'+str(PLAYER)+'.txt', send_data.flatten())
+
 
                     # print PLAYER, curr_ball_prox
+                    while True:
+                        try:
+                            aaa= np.loadtxt(LOGPATH + "intermediate1"+str(OTHERPLAYER)+".txt")
+                            if len(aaa) == 2:
+                                otherprox, otherkickable = aaa
+                                break
+                        except:
+                            continue
 
 
-                    curr_kickable = s1[12]
 
                     goal_proximity = s1[15]
                     ball_dist = 1.0 - curr_ball_prox
@@ -247,36 +255,42 @@ def main(_):
                     r = 0.0
                     # print j
                     if j != 0:
-                        f = open(LOGPATH+'intermediate_delta2'+str(PLAYER)+'.txt', 'w')
-                        f.write(str(curr_ball_prox - old_ball_prox))
-                        f.close()
-                        while True:
-                            try:
-                                otherdelta = np.loadtxt(LOGPATH + "intermediate_delta2"+str(OTHERPLAYER)+".txt", delimiter=",")
-                                if len(otherprox.shape) == 0:
-                                    break
-                            except:
-                                continue
+                        # f = open(LOGPATH+'intermediate_delta1'+str(PLAYER)+'.txt', 'w')
+                        # f.write(str(curr_ball_prox - old_ball_prox))
+                        # f.close()
+                        # while True:
+                        #     try:
+                        #         otherdelta = np.loadtxt(LOGPATH + "intermediate_delta1"+str(OTHERPLAYER)+".txt", delimiter=",")
+                        #         if len(otherprox.shape) == 0:
+                        #             break
+                        #     except:
+                        #         continue
 
                         # If game has finished, calculate reward based on whether or not a goal was scored
                         if terminal != IN_GAME:
                             if int(terminal) == 1:
                                 NUM_GOALS += 1
-                                r += 5
+                                r += 10
                         else:
-                            # Else calculate reward as distance between ball and goal
-                            r += max(curr_ball_prox - old_ball_prox, otherdelta)
+                            # Movement to ball
+                            r +=  (curr_ball_prox - old_ball_prox)
+                            # Seperation between players
+                            r += 2.0 * ((np.max([curr_ball_prox, otherprox]) / np.sum([curr_ball_prox, otherprox])) - 0.5)
+
+                            r += -3.0 * float(curr_goal_dist - old_goal_dist)
                             # print r
-                            r += -3.0 * (curr_goal_dist - old_goal_dist)
-                            # print r
-                            if (not old_kickable) and (curr_kickable):
-                                r += 1
+                            if (old_kickable == -1) and (curr_kickable == 1):
+                                r += 2
+                            if (old_other_kickable == -1) and (otherkickable == 1):
+                                r += 3
                             # print r
 
                     # print "\n\n\n"
                     old_ball_prox = curr_ball_prox
                     old_goal_dist = curr_goal_dist
                     old_kickable = curr_kickable
+                    old_other_kickable = otherkickable
+                    old_other_ball_prox = otherprox
 
                     # if r == 0:
                     #     r = -1
@@ -290,13 +304,7 @@ def main(_):
 
                     # Determine Model Switching
                     # otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
-                    while True:
-                        try:
-                            otherprox = np.loadtxt(LOGPATH + "intermediate2"+str(OTHERPLAYER)+".txt", delimiter=",")
-                            if len(otherprox.shape) == 0:
-                                break
-                        except:
-                            continue
+
                     # print
                     # print "PLAYER", PLAYER, "CURR_MODEL", CURR_MODEL
                     # print otherprox
@@ -404,8 +412,8 @@ def main(_):
                         critic.update_target_network()
 
                         if (ITERATIONS % 1000000) == 0:
-                                actor_farther.model_save(LOGPATH + "models/targetfarther4_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
-                                actor_closer.model_save(LOGPATH + "models/targetcloser4_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                actor_farther.model_save(LOGPATH + "models/targetfarther5_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                actor_closer.model_save(LOGPATH + "models/targetcloser5_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
                         # break
                     ITERATIONS += 1
                     ep_reward += r
@@ -415,7 +423,7 @@ def main(_):
                     if terminal:
                         print terminal
 
-                        f = open(LOGPATH +'logging/logs42_' + str(PLAYER) + '.txt', 'a')
+                        f = open(LOGPATH +'logging/logs43_' + str(PLAYER) + '.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                             + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
