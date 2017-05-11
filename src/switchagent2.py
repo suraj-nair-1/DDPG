@@ -249,6 +249,7 @@ def main(_):
                     # Law of Cosines
                     curr_goal_dist = np.sqrt(ball_dist*ball_dist + goal_dist*goal_dist - 2.*ball_dist*goal_dist*np.cos(alpha))
 
+                    val = 2.0 * ((np.max([curr_ball_prox, otherprox]) / np.sum([curr_ball_prox, otherprox])) - 0.5)
 
                     # print curr_ball_prox
                     # print curr_goal_dist
@@ -258,16 +259,6 @@ def main(_):
                     r = 0.0
                     # print j
                     if j != 0:
-                        # f = open(LOGPATH+'intermediate_delta1'+str(PLAYER)+'.txt', 'w')
-                        # f.write(str(curr_ball_prox - old_ball_prox))
-                        # f.close()
-                        # while True:
-                        #     try:
-                        #         otherdelta = np.loadtxt(LOGPATH + "intermediate_delta1"+str(OTHERPLAYER)+".txt", delimiter=",")
-                        #         if len(otherprox.shape) == 0:
-                        #             break
-                        #     except:
-                        #         continue
 
                         # If game has finished, calculate reward based on whether or not a goal was scored
                         if terminal != IN_GAME:
@@ -278,7 +269,7 @@ def main(_):
                             # Movement to ball
                             r +=  (curr_ball_prox - old_ball_prox)
                             # Seperation between players
-                            r += 2.0 * ((np.max([curr_ball_prox, otherprox]) / np.sum([curr_ball_prox, otherprox])) - 0.5)
+                            r += (val - oldval)
 
                             r += -3.0 * float(curr_goal_dist - old_goal_dist)
                             # print r
@@ -294,6 +285,7 @@ def main(_):
                     old_kickable = curr_kickable
                     old_other_kickable = otherkickable
                     old_other_ball_prox = otherprox
+                    oldval = val
 
                     # if r == 0:
                     #     r = -1
