@@ -89,9 +89,11 @@ def main(_):
             # print "AA"
             # Connect to the server with the specified
             # feature set. See feature sets in hfo.py/hfo.hpp.
+            print "CONNNNNECTING"
             hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
                                 'bin/teams/base/config/formations-dt', int(sys.argv[1]),
                                 'localhost', 'base_left', False)
+            print "CONNECTED"
             ITERATIONS = 0.0
             NUM_GOALS = 0.0
             CURR_MODEL = int(sys.argv[2])
