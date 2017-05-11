@@ -225,6 +225,7 @@ def main(_):
                                 otherprox, otherkickable = aaa
                                 break
                         except:
+                            print "PLAYER", PLAYER, "FETCH FAILED"
                             continue
 
 
