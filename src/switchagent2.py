@@ -19,8 +19,8 @@ from actor_hfo import ActorNetwork
 from critic_hfo import CriticNetwork
 
 
-LOGPATH = "../DDPG/"
-# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+# LOGPATH = "../DDPG/"
+LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 
 PRIORITIZED = True
 
