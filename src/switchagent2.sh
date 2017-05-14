@@ -1,9 +1,9 @@
 #!/bin/bash
-./bin/HFO --headless --frames-per-trial=500 --untouched-time=500 --offense-agents 2 --defense-npcs 1 --fullstate --port 6400 --no-logging --seed 87 &
+./bin/HFO --headless --frames-per-trial=500 --untouched-time=500 --offense-agents 2 --defense-npcs 1 --fullstate --port 6500 --no-logging --seed 67 &
 sleep 5
-python ../DDPG/src/switchagent2.py 6400 1 88 &
+python ../DDPG/src/switchagent2.py 6500 1 67 &
 sleep 5
-python ../DDPG/src/switchagent2.py 6400 2 89 &
+python ../DDPG/src/switchagent2.py 6500 2 69 &
 #python ~/git/DDPG/tflearn/continuous_space_test_agent.py 6000 &
 
 # sleep 5
