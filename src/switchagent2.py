@@ -264,19 +264,20 @@ def main(_):
                         if terminal != IN_GAME:
                             if int(terminal) == 1:
                                 NUM_GOALS += 1
-                                r += 10
+                                r += 5
                         else:
                             # Movement to ball
                             r +=  (curr_ball_prox - old_ball_prox)
+                            
                             # Seperation between players
                             r += (val - oldval)
 
                             r += -3.0 * float(curr_goal_dist - old_goal_dist)
                             # print r
                             if (old_kickable == -1) and (curr_kickable == 1):
-                                r += 2
+                                r += 1
                             if (old_other_kickable == -1) and (otherkickable == 1):
-                                r += 3
+                                r += 1
                             # print r
 
                     # print "\n\n\n"
@@ -418,7 +419,7 @@ def main(_):
                     if terminal:
                         print terminal
 
-                        f = open(LOGPATH +'logging/logs43_' + str(PLAYER) + '.txt', 'a')
+                        f = open(LOGPATH +'logging/logs45_' + str(PLAYER) + '.txt', 'a')
                         f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                             + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                             str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
