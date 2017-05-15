@@ -147,291 +147,290 @@ def main(_):
                 replay_buffer = replay_buffer_farther
 
 
+
             for i in xrange(MAX_EPISODES):
 
-                ep_reward = 0.0
-                ep_ave_max_q = 0.0
-                # OU_NOISE_PARAMS = [[.1, 0.0, max(0.0, sigma - float(i) / sigma_ep_anneal)]] * 6
+                try:
 
-                status = IN_GAME
-                # Grab the state features from the environment
-                # s1 = np.concatenate((hfo.getState(), np.ones((8,))), axis =0)
-                s1 = hfo.getState()
-                old_reward = 0
-                critic_loss = 0.0
+                    ep_reward = 0.0
+                    ep_ave_max_q = 0.0
+                    # OU_NOISE_PARAMS = [[.1, 0.0, max(0.0, sigma - float(i) / sigma_ep_anneal)]] * 6
 
-                ep_good_q = 0.0
-                ep_bad_q = 0.0
-                ep_move_q = 0.0
-                ep_turn_q = 0.0
-                ep_tackle_q = 0.0
-                ep_kick_q = 0.0
-                ep_updates = 0.0
-                # print "********************"
-                # print "Episode", i
-                # print "********************"
-                ep_switches  = 0.0
-
-                for j in xrange(MAX_EP_STEPS):
-
-
-                    # # Grab the state features from the environment
-                    # features = hfo.getState()
-                    s = s1
-
-                    # Added exploration noise
-                    s_noise = np.reshape(s, (1, state_dim)) #+ np.random.rand(1, 19)
-                    # print s_noise
-                    a = actor.predict(s_noise)[0]
-
-                    index, a = actor.add_noise(a, max(0.1, EPS_GREEDY_INIT - ITERATIONS / EPS_ITERATIONS_ANNEAL))
-
-
-                    if index == 0:
-                        action  = (DASH, a[4], a[5])
-                    elif index == 1:
-                        action = (TURN, a[6])
-                    elif index == 2:
-                        action = (TACKLE, a[7])
-                    else:
-                        action = (KICK, a[8], a[9])
-
-                    # Make action and step forward in time
-                    # print action
-                    hfo.act(*action)
-                    # print "\n"
-                    terminal = hfo.step()
-
-                    # Get new state s_(t+1)
-                    s1 = hfo.getState()
+                    status = IN_GAME
+                    # Grab the state features from the environment
                     # s1 = np.concatenate((hfo.getState(), np.ones((8,))), axis =0)
+                    s1 = hfo.getState()
+                    old_reward = 0
+                    critic_loss = 0.0
 
-                    # curr_ball_prox = 1 - 2*(np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[1])**2) / np.sqrt(20))
-                    # curr_goal_dist = np.sqrt((s1[3] - 1)**2 + (s1[4])**2)
-                    # curr_kickable = s[5]
-                    # if PLAYER == 1:
-                    #     print s1[66:]
+                    ep_good_q = 0.0
+                    ep_bad_q = 0.0
+                    ep_move_q = 0.0
+                    ep_turn_q = 0.0
+                    ep_tackle_q = 0.0
+                    ep_kick_q = 0.0
+                    ep_updates = 0.0
+                    # print "********************"
+                    # print "Episode", i
+                    # print "********************"
+                    ep_switches  = 0.0
 
-                    curr_ball_prox = s1[53]
-                    curr_kickable = s1[12]
-
-                    send_data  = np.array([curr_ball_prox, curr_kickable])
-                    np.savetxt(LOGPATH+'intermediate2'+str(PLAYER)+'.txt', send_data.flatten())
-
-
-                    # print PLAYER, curr_ball_prox
-                    while True:
-                        try:
-                            aaa= np.loadtxt(LOGPATH + "intermediate2"+str(OTHERPLAYER)+".txt")
-                            if len(aaa) == 2:
-                                otherprox, otherkickable = aaa
-                                break
-                        except:
-                            print "PLAYER", PLAYER, "FETCH FAILED"
-                            continue
+                    for j in xrange(MAX_EP_STEPS):
 
 
+                        # # Grab the state features from the environment
+                        # features = hfo.getState()
+                        s = s1
 
-                    goal_proximity = s1[15]
-                    ball_dist = 1.0 - curr_ball_prox
-                    goal_dist = 1.0 - goal_proximity
-                    ball_ang_sin_rad = s1[51]
-                    ball_ang_cos_rad = s1[52]
-                    ball_ang_rad = np.arccos(ball_ang_cos_rad)
-                    if ball_ang_sin_rad < 0:
-                        ball_ang_rad *= -1.
-                    goal_ang_sin_rad = s1[13]
-                    goal_ang_cos_rad = s1[14]
-                    goal_ang_rad = np.arccos(goal_ang_cos_rad)
-                    if goal_ang_sin_rad < 0:
-                        goal_ang_rad *= -1.
-                    alpha = max(ball_ang_rad, goal_ang_rad) - min(ball_ang_rad, goal_ang_rad)
-                    # Law of Cosines
-                    curr_goal_dist = np.sqrt(ball_dist*ball_dist + goal_dist*goal_dist - 2.*ball_dist*goal_dist*np.cos(alpha))
+                        # Added exploration noise
+                        s_noise = np.reshape(s, (1, state_dim)) #+ np.random.rand(1, 19)
+                        # print s_noise
+                        a = actor.predict(s_noise)[0]
 
-                    val = 2.0 * ((np.max([curr_ball_prox, otherprox]) / np.sum([curr_ball_prox, otherprox])) - 0.5)
-
-                    # print curr_ball_prox
-                    # print curr_goal_dist
+                        index, a = actor.add_noise(a, max(0.1, EPS_GREEDY_INIT - ITERATIONS / EPS_ITERATIONS_ANNEAL))
 
 
-
-                    r = 0.0
-                    # print j
-                    if j != 0:
-
-                        # If game has finished, calculate reward based on whether or not a goal was scored
-                        if terminal != IN_GAME:
-                            if int(terminal) == 1:
-                                NUM_GOALS += 1
-                                r += 5
+                        if index == 0:
+                            action  = (DASH, a[4], a[5])
+                        elif index == 1:
+                            action = (TURN, a[6])
+                        elif index == 2:
+                            action = (TACKLE, a[7])
                         else:
-                            # Movement to ball
-                            r +=  (curr_ball_prox - old_ball_prox)
+                            action = (KICK, a[8], a[9])
 
-                            # Seperation between players
-                            r += (val - oldval)
+                        # Make action and step forward in time
+                        # print action
+                        hfo.act(*action)
+                        # print "\n"
+                        terminal = hfo.step()
 
-                            r += -3.0 * float(curr_goal_dist - old_goal_dist)
-                            # print r
-                            if (old_kickable == -1) and (curr_kickable == 1):
-                                r += 1
-                            if (old_other_kickable == -1) and (otherkickable == 1):
-                                r += 1
-                            # print r
+                        # Get new state s_(t+1)
+                        s1 = hfo.getState()
+                        # s1 = np.concatenate((hfo.getState(), np.ones((8,))), axis =0)
 
-                    # print "\n\n\n"
-                    old_ball_prox = curr_ball_prox
-                    old_goal_dist = curr_goal_dist
-                    old_kickable = curr_kickable
-                    old_other_kickable = otherkickable
-                    old_other_ball_prox = otherprox
-                    oldval = val
+                        # curr_ball_prox = 1 - 2*(np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[1])**2) / np.sqrt(20))
+                        # curr_goal_dist = np.sqrt((s1[3] - 1)**2 + (s1[4])**2)
+                        # curr_kickable = s[5]
+                        # if PLAYER == 1:
+                        #     print s1[66:]
 
-                    # if r == 0:
-                    #     r = -1
-                    # print "Current Reward", r
-                    
+                        curr_ball_prox = s1[53]
+                        curr_kickable = s1[12]
+
+                        send_data  = np.array([curr_ball_prox, curr_kickable])
+                        np.savetxt(LOGPATH+'intermediate2'+str(PLAYER)+'.txt', send_data.flatten())
 
 
-                    replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r, \
-                        terminal, np.reshape(s1, (actor.s_dim,)))
+                        # print PLAYER, curr_ball_prox
+                        while True:
+                            try:
+                                aaa= np.loadtxt(LOGPATH + "intermediate2"+str(OTHERPLAYER)+".txt")
+                                if len(aaa) == 2:
+                                    otherprox, otherkickable = aaa
+                                    break
+                            except:
+                                print "PLAYER", PLAYER, "FETCH FAILED"
+                                continue
 
 
-                    # Determine Model Switching
-                    # otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
 
-                    # print
-                    # print "PLAYER", PLAYER, "CURR_MODEL", CURR_MODEL
-                    # print otherprox
-                    if otherprox < old_ball_prox:
-                        if CURR_MODEL == 2:
-                            actor = actor_closer
-                            critic = critic_closer
-                            replay_buffer = replay_buffer_closer
-                            ep_switches += 1
-                            CURR_MODEL = 1
+                        goal_proximity = s1[15]
+                        ball_dist = 1.0 - curr_ball_prox
+                        goal_dist = 1.0 - goal_proximity
+                        ball_ang_sin_rad = s1[51]
+                        ball_ang_cos_rad = s1[52]
+                        ball_ang_rad = np.arccos(ball_ang_cos_rad)
+                        if ball_ang_sin_rad < 0:
+                            ball_ang_rad *= -1.
+                        goal_ang_sin_rad = s1[13]
+                        goal_ang_cos_rad = s1[14]
+                        goal_ang_rad = np.arccos(goal_ang_cos_rad)
+                        if goal_ang_sin_rad < 0:
+                            goal_ang_rad *= -1.
+                        alpha = max(ball_ang_rad, goal_ang_rad) - min(ball_ang_rad, goal_ang_rad)
+                        # Law of Cosines
+                        curr_goal_dist = np.sqrt(ball_dist*ball_dist + goal_dist*goal_dist - 2.*ball_dist*goal_dist*np.cos(alpha))
 
-                            
+                        val = 2.0 * ((np.max([curr_ball_prox, otherprox]) / np.sum([curr_ball_prox, otherprox])) - 0.5)
+
+                        # print curr_ball_prox
+                        # print curr_goal_dist
+
+
+
+                        r = 0.0
+                        # print j
+                        if j != 0:
+
+                            # If game has finished, calculate reward based on whether or not a goal was scored
+                            if terminal != IN_GAME:
+                                if int(terminal) == 1:
+                                    NUM_GOALS += 1
+                                    r += 5
+                            else:
+                                # Movement to ball
+                                r +=  (curr_ball_prox - old_ball_prox)
+
+                                # Seperation between players
+                                r += (val - oldval)
+
+                                r += -3.0 * float(curr_goal_dist - old_goal_dist)
+                                # print r
+                                if (old_kickable == -1) and (curr_kickable == 1):
+                                    r += 1
+                                if (old_other_kickable == -1) and (otherkickable == 1):
+                                    r += 1
+                                # print r
+
+                        # print "\n\n\n"
+                        old_ball_prox = curr_ball_prox
+                        old_goal_dist = curr_goal_dist
+                        old_kickable = curr_kickable
+                        old_other_kickable = otherkickable
+                        old_other_ball_prox = otherprox
+                        oldval = val
+
+                        # if r == 0:
+                        #     r = -1
+                        # print "Current Reward", r
                         
-                    else:
-                        if CURR_MODEL == 1:
-                            actor = actor_farther
-                            critic = critic_farther
-                            replay_buffer = replay_buffer_farther
-                            ep_switches += 1
-                            CURR_MODEL = 2
-                    # print sess
 
+
+                        replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r, \
+                            terminal, np.reshape(s1, (actor.s_dim,)))
+
+
+                        # Determine Model Switching
+                        # otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
+
+                        # print
+                        # print "PLAYER", PLAYER, "CURR_MODEL", CURR_MODEL
+                        # print otherprox
+                        if otherprox < old_ball_prox:
+                            if CURR_MODEL == 2:
+                                actor = actor_closer
+                                critic = critic_closer
+                                replay_buffer = replay_buffer_closer
+                                ep_switches += 1
+                                CURR_MODEL = 1
+
+                                
                             
-                            
-                    # print "______________________________"
-
-                    # Keep adding experience to the memory until
-                    # there are at least minibatch size samples
-                    # TRAINING STEP
-                    ###########################################################
-                    if (replay_buffer.size() > MINIBATCH_SIZE) and (ITERATIONS % 10 == 0):
-
-                        if (not PRIORITIZED) or (ITERATIONS < 200000) or (NUM_GOALS > 50):
-                            s_batch, a_batch, r_batch, t_batch, s1_batch = \
-                                replay_buffer.sample_batch(MINIBATCH_SIZE)
                         else:
-                            s_batch, a_batch, r_batch, t_batch, s1_batch = \
-                                replay_buffer.sample_batch_prioritized(MINIBATCH_SIZE)
+                            if CURR_MODEL == 1:
+                                actor = actor_farther
+                                critic = critic_farther
+                                replay_buffer = replay_buffer_farther
+                                ep_switches += 1
+                                CURR_MODEL = 2
 
-                        ep_updates += 1
+                        # TRAINING STEP
+                        ###########################################################
+                        if (replay_buffer.size() > MINIBATCH_SIZE) and (ITERATIONS % 10 == 0):
 
-                        # print actor.predict_target(s_batch).shape
-                        good_batch = []
-                        bad_batch = []
-                        for elem in s_batch:
-                            ball_angle_sin = elem[51]
-                            ang = np.degrees(np.arcsin(ball_angle_sin))
-                            if ang > 0:
-                                bad_ang = ang - 180
+                            if (not PRIORITIZED) or (ITERATIONS < 200000) or (NUM_GOALS > 50):
+                                s_batch, a_batch, r_batch, t_batch, s1_batch = \
+                                    replay_buffer.sample_batch(MINIBATCH_SIZE)
                             else:
-                                bad_ang = ang + 180
-                            good_batch.append([1, 0, 0, 0, 10, ang, 0, 0, 0, 0])
-                            bad_batch.append([1, 0, 0, 0, 10, bad_ang, 0, 0, 0, 0])
+                                s_batch, a_batch, r_batch, t_batch, s1_batch = \
+                                    replay_buffer.sample_batch_prioritized(MINIBATCH_SIZE)
 
-                        move_batch = []
-                        turn_batch = []
-                        tackle_batch = []
-                        kick_batch = []
-                        for elem in s_batch:
-                            move_batch.append([1, 0, 0, 0,np.random.uniform(0, 100) , np.random.uniform(-180, 180), 0, 0, 0, 0])
-                            turn_batch.append([0, 1, 0, 0, 0, 0, np.random.uniform(-180, 180), 0, 0, 0])
-                            tackle_batch.append([0, 0, 1, 0, 0, 0, 0, np.random.uniform(-180, 180), 0, 0])
-                            kick_batch.append([0, 0, 0, 1, 0, 0, 0, 0, np.random.uniform(0, 100) , np.random.uniform(-180, 180)])
+                            ep_updates += 1
 
-                            
-                        target_good = critic.predict_target(s_batch, np.array(good_batch))
-                        target_bad = critic.predict_target(s_batch, np.array(bad_batch))
-                        target_move = critic.predict_target(s_batch, np.array(move_batch))
-                        target_turn = critic.predict_target(s_batch, np.array(turn_batch))
-                        target_tackle = critic.predict_target(s_batch, np.array(tackle_batch))
-                        target_kick = critic.predict_target(s_batch, np.array(kick_batch))
+                            # print actor.predict_target(s_batch).shape
+                            good_batch = []
+                            bad_batch = []
+                            for elem in s_batch:
+                                ball_angle_sin = elem[51]
+                                ang = np.degrees(np.arcsin(ball_angle_sin))
+                                if ang > 0:
+                                    bad_ang = ang - 180
+                                else:
+                                    bad_ang = ang + 180
+                                good_batch.append([1, 0, 0, 0, 10, ang, 0, 0, 0, 0])
+                                bad_batch.append([1, 0, 0, 0, 10, bad_ang, 0, 0, 0, 0])
 
-                        ep_good_q += np.mean(target_good)
-                        ep_bad_q += np.mean(target_bad)
-                        ep_move_q += np.mean(target_move)
-                        ep_turn_q += np.mean(target_turn)
-                        ep_tackle_q += np.mean(target_tackle)
-                        ep_kick_q += np.mean(target_kick)
+                            move_batch = []
+                            turn_batch = []
+                            tackle_batch = []
+                            kick_batch = []
+                            for elem in s_batch:
+                                move_batch.append([1, 0, 0, 0,np.random.uniform(0, 100) , np.random.uniform(-180, 180), 0, 0, 0, 0])
+                                turn_batch.append([0, 1, 0, 0, 0, 0, np.random.uniform(-180, 180), 0, 0, 0])
+                                tackle_batch.append([0, 0, 1, 0, 0, 0, 0, np.random.uniform(-180, 180), 0, 0])
+                                kick_batch.append([0, 0, 0, 1, 0, 0, 0, 0, np.random.uniform(0, 100) , np.random.uniform(-180, 180)])
 
-                        target_q = critic.predict_target(s1_batch, actor.predict_target(s1_batch))
+                                
+                            target_good = critic.predict_target(s_batch, np.array(good_batch))
+                            target_bad = critic.predict_target(s_batch, np.array(bad_batch))
+                            target_move = critic.predict_target(s_batch, np.array(move_batch))
+                            target_turn = critic.predict_target(s_batch, np.array(turn_batch))
+                            target_tackle = critic.predict_target(s_batch, np.array(tackle_batch))
+                            target_kick = critic.predict_target(s_batch, np.array(kick_batch))
 
-                        y_i = []
-                        for k in xrange(MINIBATCH_SIZE):
-                            if t_batch[k] != IN_GAME:
-                                y_i.append(r_batch[k])
-                            else:
-                                y_i.append(r_batch[k] + GAMMA * target_q[k])
+                            ep_good_q += np.mean(target_good)
+                            ep_bad_q += np.mean(target_bad)
+                            ep_move_q += np.mean(target_move)
+                            ep_turn_q += np.mean(target_turn)
+                            ep_tackle_q += np.mean(target_tackle)
+                            ep_kick_q += np.mean(target_kick)
 
-                        # Update the critic given the targets
-                        # print y_i
-                        # print predicted_q_value
-                        predicted_q_value, ep_critic_loss, _ = critic.train(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
-                        # predicted_q_value, ep_critic_loss = critic.getloss(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
+                            target_q = critic.predict_target(s1_batch, actor.predict_target(s1_batch))
 
-                        ep_ave_max_q += np.mean(predicted_q_value)
-                        critic_loss += np.mean(ep_critic_loss)
+                            y_i = []
+                            for k in xrange(MINIBATCH_SIZE):
+                                if t_batch[k] != IN_GAME:
+                                    y_i.append(r_batch[k])
+                                else:
+                                    y_i.append(r_batch[k] + GAMMA * target_q[k])
 
-                        # Update the actor policy using the sampled gradient
-                        a_outs = actor.predict(s_batch)
-                        grads = critic.action_gradients(s_batch, a_outs)
-                        actor.train(s_batch, grads[0])
+                            # Update the critic given the targets
+                            # print y_i
+                            # print predicted_q_value
+                            predicted_q_value, ep_critic_loss, _ = critic.train(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
+                            # predicted_q_value, ep_critic_loss = critic.getloss(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
 
-                        # Update target networks
-                        actor.update_target_network()
-                        critic.update_target_network()
+                            ep_ave_max_q += np.mean(predicted_q_value)
+                            critic_loss += np.mean(ep_critic_loss)
 
-                        if (ITERATIONS % 1000000) == 0:
-                                actor_farther.model_save(LOGPATH + "models/targetfarther6_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
-                                actor_closer.model_save(LOGPATH + "models/targetcloser6_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
-                        # break
-                    ITERATIONS += 1
-                    ep_reward += r
+                            # Update the actor policy using the sampled gradient
+                            a_outs = actor.predict(s_batch)
+                            grads = critic.action_gradients(s_batch, a_outs)
+                            actor.train(s_batch, grads[0])
 
-                    # EPISODE IS OVER
-                    ###########################################################
-                    if terminal:
-                        print terminal
+                            # Update target networks
+                            actor.update_target_network()
+                            critic.update_target_network()
 
-                        f = open(LOGPATH +'logging/logs46_' + str(PLAYER) + '.txt', 'a')
-                        f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
-                            + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
-                            str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
-                            "," + str(ep_good_q / float(ep_updates+1)) + "," + str(ep_bad_q / float(ep_updates+1))\
-                            + "," + str(ep_move_q / float(ep_updates+1)) + "," + str(ep_turn_q / float(ep_updates+1))\
-                            + "," + str(ep_tackle_q / float(ep_updates+1)) + "," + str(ep_kick_q / float(ep_updates+1)) + "," + str(ep_switches) + "\n")
-                        f.close()
+                            if (ITERATIONS % 1000000) == 0:
+                                    actor_farther.model_save(LOGPATH + "models/targetfarther7_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                    actor_closer.model_save(LOGPATH + "models/targetcloser7_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                            # break
+                        ITERATIONS += 1
+                        ep_reward += r
 
-                        print('| Reward: ' , float(ep_reward), " | Episode", i, \
-                            '| Qmax:',  (ep_ave_max_q / float(j+1)), ' | Critic Loss: ', float(critic_loss)/ float(j+1))
+                        # EPISODE IS OVER
+                        ###########################################################
+                        if terminal:
+                            print terminal
 
-                        break
+                            f = open(LOGPATH +'logging/logs47_' + str(PLAYER) + '.txt', 'a')
+                            f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
+                                + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
+                                str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
+                                "," + str(ep_good_q / float(ep_updates+1)) + "," + str(ep_bad_q / float(ep_updates+1))\
+                                + "," + str(ep_move_q / float(ep_updates+1)) + "," + str(ep_turn_q / float(ep_updates+1))\
+                                + "," + str(ep_tackle_q / float(ep_updates+1)) + "," + str(ep_kick_q / float(ep_updates+1)) + "," + str(ep_switches) + "\n")
+                            f.close()
+
+                            print('| Reward: ' , float(ep_reward), " | Episode", i, \
+                                '| Qmax:',  (ep_ave_max_q / float(j+1)), ' | Critic Loss: ', float(critic_loss)/ float(j+1))
+
+                            break
+                except Exception,e:
+                    print "EPISODE", i, "FAILED"
+                    print str(e)
 
 if __name__ == '__main__':
     tf.app.run()
