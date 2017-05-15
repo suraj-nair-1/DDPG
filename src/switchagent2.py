@@ -428,7 +428,7 @@ def main(_):
                                 '| Qmax:',  (ep_ave_max_q / float(j+1)), ' | Critic Loss: ', float(critic_loss)/ float(j+1))
 
                             break
-                except Exception,e:
+                except Exception as e:
                     print "EPISODE", i, "FAILED"
                     print str(e)
 
