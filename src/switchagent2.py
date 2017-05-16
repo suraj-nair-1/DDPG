@@ -170,6 +170,7 @@ def main(_):
                     ep_tackle_q = 0.0
                     ep_kick_q = 0.0
                     ep_updates = 0.0
+                    ep_val_r = 0.0
                     # print "********************"
                     # print "Episode", i
                     # print "********************"
@@ -274,6 +275,7 @@ def main(_):
 
                                 # Seperation between players
                                 r += (val - oldval)
+                                ep_val_r += (val - oldval)
 
                                 r += -3.0 * float(curr_goal_dist - old_goal_dist)
                                 # print r
@@ -415,13 +417,14 @@ def main(_):
                         if terminal:
                             print terminal
 
-                            f = open(LOGPATH +'logging/logs47_' + str(PLAYER) + '.txt', 'a')
+                            f = open(LOGPATH +'logging/logs48_' + str(PLAYER) + '.txt', 'a')
                             f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                                 + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                                 str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
                                 "," + str(ep_good_q / float(ep_updates+1)) + "," + str(ep_bad_q / float(ep_updates+1))\
                                 + "," + str(ep_move_q / float(ep_updates+1)) + "," + str(ep_turn_q / float(ep_updates+1))\
-                                + "," + str(ep_tackle_q / float(ep_updates+1)) + "," + str(ep_kick_q / float(ep_updates+1)) + "," + str(ep_switches) + "\n")
+                                + "," + str(ep_tackle_q / float(ep_updates+1)) + "," + str(ep_kick_q / float(ep_updates+1)) \
+                                + "," + str(ep_switches) +"," +  str(ep_val_r)+ "\n")
                             f.close()
 
                             print('| Reward: ' , float(ep_reward), " | Episode", i, \
@@ -431,6 +434,7 @@ def main(_):
                 except Exception as e:
                     print "EPISODE", i, "FAILED"
                     print str(e)
+                    break
 
 if __name__ == '__main__':
     tf.app.run()
