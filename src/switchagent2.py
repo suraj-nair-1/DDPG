@@ -19,8 +19,8 @@ from actor_hfo import ActorNetwork
 from critic_hfo import CriticNetwork
 
 
-# LOGPATH = "../DDPG/"
-LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+LOGPATH = "../DDPG/"
+# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 
 PRIORITIZED = True
 
@@ -253,7 +253,7 @@ def main(_):
                         # Law of Cosines
                         curr_goal_dist = np.sqrt(ball_dist*ball_dist + goal_dist*goal_dist - 2.*ball_dist*goal_dist*np.cos(alpha))
 
-                        val = 2.0 * ((np.max([curr_ball_prox, otherprox]) / np.sum([curr_ball_prox, otherprox])) - 0.5)
+                        val = 2.0 * ((np.max([curr_ball_prox + 1, otherprox + 1]) / np.sum([curr_ball_prox + 1, otherprox + 1])) - 0.5)
 
                         # print curr_ball_prox
                         # print curr_goal_dist

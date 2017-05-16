@@ -1,5 +1,5 @@
 #!/bin/bash
-./bin/HFO --headless --frames-per-trial=500 --untouched-time=500 --offense-agents 2 --defense-npcs 1 --fullstate --port 6500 --no-logging --seed 67 &
+./bin/HFO --no-sync --frames-per-trial=500 --untouched-time=500 --offense-agents 2 --defense-npcs 1 --fullstate --port 6500 --no-logging --seed 67 &
 sleep 5
 python ../DDPG/src/switchagent2.py 6500 1 68 &
 sleep 5
