@@ -434,6 +434,7 @@ def main(_):
 
                     if j < 3:
                         print "SOMETHING IS WRONG"
+                        assert(False)
                         break
                 except Exception as e:
                     print "EPISODE", i, "FAILED"
