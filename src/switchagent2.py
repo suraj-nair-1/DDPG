@@ -439,6 +439,7 @@ def main(_):
                 except Exception as e:
                     print "EPISODE", i, "FAILED"
                     print str(e)
+                    assert(False)
                     break
 
 if __name__ == '__main__':
