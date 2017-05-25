@@ -220,13 +220,13 @@ def main(_):
                         curr_kickable = s1[12]
 
                         send_data  = np.array([curr_ball_prox, curr_kickable])
-                        np.savetxt(LOGPATH+'intermediate1'+str(PLAYER)+'.txt', send_data.flatten())
+                        np.savetxt(LOGPATH+'intermediate2'+str(PLAYER)+'.txt', send_data.flatten())
 
 
                         # print PLAYER, curr_ball_prox
                         while True:
                             try:
-                                aaa= np.loadtxt(LOGPATH + "intermediate1"+str(OTHERPLAYER)+".txt")
+                                aaa= np.loadtxt(LOGPATH + "intermediate2"+str(OTHERPLAYER)+".txt")
                                 if len(aaa) == 2:
                                     otherprox, otherkickable = aaa
                                     break
