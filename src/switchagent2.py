@@ -432,9 +432,9 @@ def main(_):
 
                             break
 
-                if j < 3:
-                    print "SOMETHING IS WRONG"
-                    break
+                    if j < 3:
+                        print "SOMETHING IS WRONG"
+                        break
                 except Exception as e:
                     print "EPISODE", i, "FAILED"
                     print str(e)
