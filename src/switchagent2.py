@@ -424,7 +424,7 @@ def main(_):
                                 "," + str(ep_good_q / float(ep_updates+1)) + "," + str(ep_bad_q / float(ep_updates+1))\
                                 + "," + str(ep_move_q / float(ep_updates+1)) + "," + str(ep_turn_q / float(ep_updates+1))\
                                 + "," + str(ep_tackle_q / float(ep_updates+1)) + "," + str(ep_kick_q / float(ep_updates+1)) \
-                                + "," + str(ep_switches) +"," +  str(ep_val_r)+  +"," +  str(j)+ "\n")
+                                + "," + str(ep_switches) +"," +  str(ep_val_r)+ "," +  str(j)+ "\n")
                             f.close()
 
                             print('| Reward: ' , float(ep_reward), " | Episode", i, \
