@@ -432,10 +432,7 @@ def main(_):
 
                             break
 
-                    if j < 3:
-                        print "SOMETHING IS WRONG"
-                        assert(False)
-                        break
+                    print j
                 except Exception as e:
                     print "EPISODE", i, "FAILED"
                     print str(e)
