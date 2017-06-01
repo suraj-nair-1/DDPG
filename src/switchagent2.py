@@ -135,10 +135,10 @@ def main(_):
             # Set up summary Ops
             sess.run(tf.global_variables_initializer())
 
-            actor_closer.model_load(LOGPATH+"models/targercloser4_1_2000000.0.tflearn", True)
-            actor_farther.model_load(LOGPATH+"models/targerfarther4_1_2000000.0.tflearn", True)
-            actor_closer.model_load(LOGPATH+"models/targercloser4_1_2000000.0.tflearn", False)
-            actor_farther.model_load(LOGPATH+"models/targerfarther4_1_2000000.0.tflearn", False)
+            actor_closer.model_load(LOGPATH+"models/targetcloser4_1_2000000.0.tflearn", True)
+            actor_farther.model_load(LOGPATH+"models/targetfarther4_1_2000000.0.tflearn", True)
+            actor_closer.model_load(LOGPATH+"models/targetcloser4_1_2000000.0.tflearn", False)
+            actor_farther.model_load(LOGPATH+"models/targetfarther4_1_2000000.0.tflearn", False)
 
             # Initialize target network weights
             actor.update_target_network()
