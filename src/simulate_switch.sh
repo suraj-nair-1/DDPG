@@ -3,7 +3,7 @@
 sleep 5
 python ../DDPG/src/simulate_switch.py 4200 1 targetcloser4_1_2000000.0.tflearn targetfarther4_1_2000000.0.tflearn &
 sleep 5
-python ../DDPG/src/simulate_switch.py 4200 2 targetcloser4_1_2000000.0.tflearn targetfarther4_1_2000000.0.tflearn &
+python ../DDPG/src/simulate_switch.py 4200 2 targetcloser4_2_2000000.0.tflearn targetfarther4_2_2000000.0.tflearn &
 #python ~/git/DDPG/tflearn/continuous_space_test_agent.py 6000 &
 
 # sleep 5

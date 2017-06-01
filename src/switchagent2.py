@@ -112,6 +112,7 @@ def main(_):
             actor_closer = ActorNetwork(sess, state_dim, action_dim, low_action_bound, \
                 high_action_bound, ACTOR_LEARNING_RATE, TAU, LOGPATH, sys.argv[2])
 
+
             critic_closer = CriticNetwork(sess, state_dim, action_dim, low_action_bound, high_action_bound, \
                 CRITIC_LEARNING_RATE, TAU, actor_closer.get_num_trainable_vars(), MINIBATCH_SIZE, LOGPATH)
 
@@ -133,6 +134,9 @@ def main(_):
 
             # Set up summary Ops
             sess.run(tf.global_variables_initializer())
+
+            actor_closer.model_load("models/targercloser4_1_2000000.0.tflearn")
+            actor_farther.model_load("models/targerfarther4_1_2000000.0.tflearn")
 
             # Initialize target network weights
             actor.update_target_network()
@@ -220,13 +224,13 @@ def main(_):
                         curr_kickable = s1[12]
 
                         send_data  = np.array([curr_ball_prox, curr_kickable])
-                        np.savetxt(LOGPATH+'intermediate3'+str(PLAYER)+'.txt', send_data.flatten())
+                        np.savetxt(LOGPATH+'intermediate2'+str(PLAYER)+'.txt', send_data.flatten())
 
 
                         # print PLAYER, curr_ball_prox
                         while True:
                             try:
-                                aaa= np.loadtxt(LOGPATH + "intermediate3"+str(OTHERPLAYER)+".txt")
+                                aaa= np.loadtxt(LOGPATH + "intermediate2"+str(OTHERPLAYER)+".txt")
                                 if len(aaa) == 2:
                                     otherprox, otherkickable = aaa
                                     break
@@ -406,8 +410,8 @@ def main(_):
                             critic.update_target_network()
 
                             if (ITERATIONS % 1000000) == 0:
-                                    actor_farther.model_save(LOGPATH + "models/targetfarther11_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
-                                    actor_closer.model_save(LOGPATH + "models/targetcloser11_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                    actor_farther.model_save(LOGPATH + "models/targetfarther10_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                    actor_closer.model_save(LOGPATH + "models/targetcloser10_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
                             # break
                         ITERATIONS += 1
                         ep_reward += r
@@ -417,7 +421,7 @@ def main(_):
                         if terminal:
                             print terminal
 
-                            f = open(LOGPATH +'logging/logs52_' + str(PLAYER) + '.txt', 'a')
+                            f = open(LOGPATH +'logging/logs51_' + str(PLAYER) + '.txt', 'a')
                             f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                                 + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                                 str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
