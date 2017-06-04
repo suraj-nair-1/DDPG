@@ -226,13 +226,13 @@ def main(_):
                         curr_kickable = s1[12]
 
                         send_data  = np.array([curr_ball_prox, curr_kickable])
-                        np.savetxt(LOGPATH+'intermediate1'+str(PLAYER)+'.txt', send_data.flatten())
+                        np.savetxt(LOGPATH+'intermediate2'+str(PLAYER)+'.txt', send_data.flatten())
 
 
                         # print PLAYER, curr_ball_prox
                         while True:
                             try:
-                                aaa= np.loadtxt(LOGPATH + "intermediate1"+str(OTHERPLAYER)+".txt")
+                                aaa= np.loadtxt(LOGPATH + "intermediate2"+str(OTHERPLAYER)+".txt")
                                 if len(aaa) == 2:
                                     otherprox, otherkickable = aaa
                                     break
@@ -412,8 +412,8 @@ def main(_):
                             critic.update_target_network()
 
                             if (ITERATIONS % 1000000) == 0:
-                                    actor_farther.model_save(LOGPATH + "models/targetfarther12_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
-                                    actor_closer.model_save(LOGPATH + "models/targetcloser12_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                    actor_farther.model_save(LOGPATH + "models/targetfarther13_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                    actor_closer.model_save(LOGPATH + "models/targetcloser13_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
                             # break
                         ITERATIONS += 1
                         ep_reward += r
@@ -423,7 +423,7 @@ def main(_):
                         if terminal:
                             print terminal
 
-                            f = open(LOGPATH +'logging/logs53_' + str(PLAYER) + '.txt', 'a')
+                            f = open(LOGPATH +'logging/logs54_' + str(PLAYER) + '.txt', 'a')
                             f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                                 + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                                 str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
