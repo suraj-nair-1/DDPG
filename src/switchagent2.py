@@ -280,7 +280,7 @@ def main(_):
                                 r +=  (curr_ball_prox - old_ball_prox)
 
                                 # Seperation between players
-                                r += 0.1 * (val - oldval)
+                                r += 0.2 * (val - oldval)
                                 ep_val_r += (val - oldval)
 
                                 r += -3.0 * float(curr_goal_dist - old_goal_dist)
