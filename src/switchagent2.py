@@ -39,7 +39,7 @@ TAU = 0.0001
 
 # Noise for exploration
 EPS_GREEDY_INIT = 1.0
-EPS_ITERATIONS_ANNEAL = 100000
+EPS_ITERATIONS_ANNEAL = 1000000
 
 # sigma = 1.0
 # sigma_ep_anneal = 2000
@@ -152,6 +152,8 @@ def main(_):
             else:
                 replay_buffer = replay_buffer_farther
 
+            num_0_row = 0
+
 
 
             for i in xrange(MAX_EPISODES):
@@ -226,13 +228,13 @@ def main(_):
                         curr_kickable = s1[12]
 
                         send_data  = np.array([curr_ball_prox, curr_kickable])
-                        np.savetxt(LOGPATH+'intermediate3'+str(PLAYER)+'.txt', send_data.flatten())
+                        np.savetxt(LOGPATH+'intermediate1'+str(PLAYER)+'.txt', send_data.flatten())
 
 
                         # print PLAYER, curr_ball_prox
                         while True:
                             try:
-                                aaa= np.loadtxt(LOGPATH + "intermediate3"+str(OTHERPLAYER)+".txt")
+                                aaa= np.loadtxt(LOGPATH + "intermediate1"+str(OTHERPLAYER)+".txt")
                                 if len(aaa) == 2:
                                     otherprox, otherkickable = aaa
                                     break
@@ -412,8 +414,8 @@ def main(_):
                             critic.update_target_network()
 
                             if (ITERATIONS % 1000000) == 0:
-                                    actor_farther.model_save(LOGPATH + "models/targetfarther14_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
-                                    actor_closer.model_save(LOGPATH + "models/targetcloser14_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                    actor_farther.model_save(LOGPATH + "models/targetfarther16_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                    actor_closer.model_save(LOGPATH + "models/targetcloser16_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
                             # break
                         ITERATIONS += 1
                         ep_reward += r
@@ -423,7 +425,17 @@ def main(_):
                         if terminal:
                             print terminal
 
-                            f = open(LOGPATH +'logging/logs55_' + str(PLAYER) + '.txt', 'a')
+                            if j == 0:
+                                num_0_row += 1
+                            else:
+                                num_0_row = 0
+
+                            if num_0_row > 5:
+                                print "HFO FAILING"
+                                sys.exit()
+
+
+                            f = open(LOGPATH +'logging/logs56_' + str(PLAYER) + '.txt', 'a')
                             f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                                 + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                                 str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
@@ -437,6 +449,8 @@ def main(_):
                                 '| Qmax:',  (ep_ave_max_q / float(j+1)), ' | Critic Loss: ', float(critic_loss)/ float(j+1))
 
                             break
+
+
 
                 except Exception as e:
                     print "EPISODE", i, "FAILED"
