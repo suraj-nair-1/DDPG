@@ -149,7 +149,7 @@ class ActorNetwork(object):
 
         # With probability epsilon, set all discrete actions to be equally likely
 
-        if np.random.random_sample() <= eps:
+        if (np.random.random_sample() <= eps) or (np.isnan(a).any()):
             # print "RANDOM AF &&&&&&&&&&&&&&&&&"
             acts = np.random.uniform(1, 10, 4)
             a[:4] = acts / np.sum(acts)
