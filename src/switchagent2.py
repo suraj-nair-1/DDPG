@@ -39,7 +39,7 @@ TAU = 0.0001
 
 # Noise for exploration
 EPS_GREEDY_INIT = 1.0
-EPS_ITERATIONS_ANNEAL = 1000000
+EPS_ITERATIONS_ANNEAL = 100000
 
 # sigma = 1.0
 # sigma_ep_anneal = 2000
@@ -193,6 +193,8 @@ def main(_):
 
                         # Added exploration noise
                         s_noise = np.reshape(s, (1, state_dim)) #+ np.random.rand(1, 19)
+
+                        assert(np.isnan(s_noise).any() == False)
                         # print s_noise
                         a = actor.predict(s_noise)[0]
 
