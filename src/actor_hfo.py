@@ -88,12 +88,6 @@ class ActorNetwork(object):
         # scaled_out = tf.mul(out, self.high_action_bound - self.low_action_bound) + self.low_action_bound
         return inputs, out, scaled_out, model
 
-    # def load(self, loadfrom):
-    #     if loadfrom is not None:
-    #         self.model.load(loadfrom)
-    #         self.target_model.load(loadfrom)
-
-
     def model_save(self, saveto, target):
         if target:
             self.target_model.save(saveto)
