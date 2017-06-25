@@ -91,9 +91,15 @@ def main(_):
             # Connect to the server with the specified
             # feature set. See feature sets in hfo.py/hfo.hpp.
             print "CONNECTING ..."
-            hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
-                                'bin/teams/base/config/formations-dt', PORT,
-                                'localhost', 'base_left', True)
+            if OFFENSE:
+                hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
+                    'bin/teams/base/config/formations-dt', PORT,
+                    'localhost', 'base_left', False)
+            else:
+                hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
+                    'bin/teams/base/config/formations-dt', PORT,
+                    'localhost', 'base_right', True)
+
             print "CONNECTED"
             ITERATIONS = 0.0
             NUM_GOALS = 0.0
@@ -123,6 +129,8 @@ def main(_):
 
             # Set up summary Ops
             sess.run(tf.global_variables_initializer())
+
+            print "INITIALIZED VARIABLES"
 
 
             # Initialize target network weights
@@ -219,9 +227,14 @@ def main(_):
                                     other2 = np.loadtxt(LOGPATH+'actions_1_'+str(2)+'.txt')
 
                                 other = np.concatenate([other1, other2], axis = 0)
+                                assert(other.shape == (20,))
+                                break
                             except:
                                 print "PLAYER", PLAYER, "FETCH FAILED"
+                                # print e
                                 continue
+
+                        # print other.shape
 
 
 
@@ -242,7 +255,7 @@ def main(_):
                         # Law of Cosines
                         curr_goal_dist = np.sqrt(ball_dist*ball_dist + goal_dist*goal_dist - 2.*ball_dist*goal_dist*np.cos(alpha))
 
-                        val = 2.0 * ((np.max([curr_ball_prox + 1, otherprox + 1]) / np.sum([curr_ball_prox + 1, otherprox + 1])) - 0.5)
+                        # val = 2.0 * ((np.max([curr_ball_prox + 1, otherprox + 1]) / np.sum([curr_ball_prox + 1, otherprox + 1])) - 0.5)
 
                         # print curr_ball_prox
                         # print curr_goal_dist
@@ -281,6 +294,8 @@ def main(_):
                                         NUM_GOALS += 1
                                         r += -5
                                 else:
+                                    r +=  (curr_ball_prox - old_ball_prox)
+
                                     r += 3.0 * float(curr_goal_dist - old_goal_dist)
                                     # print r
                                     if (old_kickable == -1) and (curr_kickable == 1):
@@ -293,9 +308,9 @@ def main(_):
                         old_ball_prox = curr_ball_prox
                         old_goal_dist = curr_goal_dist
                         old_kickable = curr_kickable
-                        old_other_kickable = otherkickable
-                        old_other_ball_prox = otherprox
-                        oldval = val
+                        # old_other_kickable = otherkickable
+                        # old_other_ball_prox = otherprox
+                        # oldval = val
 
                         # if r == 0:
                         #     r = -1

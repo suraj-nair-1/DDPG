@@ -126,7 +126,7 @@ class CriticNetwork(object):
         return self.sess.run(self.target_out, feed_dict={
             self.target_inputs: inputs,
             self.target_action: action,
-            self.otheraction: otheraction
+            self.target_otheraction: otheraction
         })
 
     def action_gradients(self, inputs, actions, otheraction):
