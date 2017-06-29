@@ -40,7 +40,7 @@ class ReplayBuffer(object):
         best = self.sortedbuffer[-(self.buffer_size / 10):]
         
         if np.random.uniform() < 0.01:
-            self.sortedbuffer = sorted(self.sortedbuffer, key=lambda row: row[2])
+            self.sortedbuffer = sorted(self.sortedbuffer, key=lambda row: row[3])
             worst = self.sortedbuffer[:(self.buffer_size / 10)]
             best = self.sortedbuffer[-(self.buffer_size / 10):]
             self.sortedbuffer = worst + best
