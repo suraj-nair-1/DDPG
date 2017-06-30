@@ -402,7 +402,7 @@ def main(_):
                             critic.update_target_network()
 
                             if (ITERATIONS % 1000000) == 0:
-                                    actor_farther.model_save(LOGPATH + "models/target_"+str(OFFENSE)+"_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                    actor.model_save(LOGPATH + "models/target_"+str(OFFENSE)+"_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
                             # break
                         ITERATIONS += 1
                         ep_reward += r
