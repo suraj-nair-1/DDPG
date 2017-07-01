@@ -40,7 +40,7 @@ TAU = 0.0001
 
 # Noise for exploration
 EPS_GREEDY_INIT = 1.0
-EPS_ITERATIONS_ANNEAL = 1000000
+# EPS_ITERATIONS_ANNEAL = 1000000
 
 # sigma = 1.0
 # sigma_ep_anneal = 2000
@@ -93,11 +93,12 @@ def main(_):
             # feature set. See feature sets in hfo.py/hfo.hpp.
             print "CONNECTING ..."
             if OFFENSE:
+                EPS_ITERATIONS_ANNEAL = 1000000
                 hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
                     'bin/teams/base/config/formations-dt', PORT,
                     'localhost', 'base_left', False)
             else:
-                EPS_ITERATIONS_ANNEAL *= 3
+                EPS_ITERATIONS_ANNEAL = 3000000
                 hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
                     'bin/teams/base/config/formations-dt', PORT,
                     'localhost', 'base_right', True)
