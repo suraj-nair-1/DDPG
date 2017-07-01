@@ -97,6 +97,7 @@ def main(_):
                     'bin/teams/base/config/formations-dt', PORT,
                     'localhost', 'base_left', False)
             else:
+                EPS_ITERATIONS_ANNEAL *= 3
                 hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
                     'bin/teams/base/config/formations-dt', PORT,
                     'localhost', 'base_right', True)
@@ -214,18 +215,18 @@ def main(_):
                         send_data  = np.array([curr_ball_prox, curr_kickable])
 
 
-                        np.savetxt(LOGPATH+'actions_'+str(OFFENSE) + "_"+str(PLAYER)+'.txt', a.flatten())
+                        np.savetxt(LOGPATH+'actions1_'+str(OFFENSE) + "_"+str(PLAYER)+'.txt', a.flatten())
 
 
                         # print PLAYER, curr_ball_prox
                         while True:
                             try:
                                 if OFFENSE:
-                                    other1 = np.loadtxt(LOGPATH+'actions_'+str(OFFENSE) + "_"+str(OTHERPLAYER)+'.txt')
-                                    other2 = np.loadtxt(LOGPATH+'actions_0_3.txt')
+                                    other1 = np.loadtxt(LOGPATH+'actions1_'+str(OFFENSE) + "_"+str(OTHERPLAYER)+'.txt')
+                                    other2 = np.loadtxt(LOGPATH+'actions1_0_3.txt')
                                 else:
-                                    other1 = np.loadtxt(LOGPATH+'actions_1_'+str(1)+'.txt')
-                                    other2 = np.loadtxt(LOGPATH+'actions_1_'+str(2)+'.txt')
+                                    other1 = np.loadtxt(LOGPATH+'actions1_1_'+str(1)+'.txt')
+                                    other2 = np.loadtxt(LOGPATH+'actions1_1_'+str(2)+'.txt')
 
                                 other = np.concatenate([other1, other2], axis = 0)
                                 assert(other.shape == (20,))
@@ -402,7 +403,7 @@ def main(_):
                             critic.update_target_network()
 
                             if (ITERATIONS % 1000000) == 0:
-                                    actor.model_save(LOGPATH + "models/target_"+str(OFFENSE)+"_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                    actor.model_save(LOGPATH + "models/target2_"+str(OFFENSE)+"_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
                             # break
                         ITERATIONS += 1
                         ep_reward += r
@@ -422,7 +423,7 @@ def main(_):
                                 sys.exit()
 
 
-                            f = open(LOGPATH +'logging/logs60_' + str(PLAYER) + '.txt', 'a')
+                            f = open(LOGPATH +'logging/logs61_' + str(PLAYER) + '.txt', 'a')
                             f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                                 + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                                 str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
