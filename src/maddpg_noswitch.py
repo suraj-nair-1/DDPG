@@ -93,7 +93,7 @@ def main(_):
             # feature set. See feature sets in hfo.py/hfo.hpp.
             print "CONNECTING ..."
             if OFFENSE:
-                EPS_ITERATIONS_ANNEAL = 1000000
+                EPS_ITERATIONS_ANNEAL = 100000
                 hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
                     'bin/teams/base/config/formations-dt', PORT,
                     'localhost', 'base_left', False)
@@ -135,7 +135,7 @@ def main(_):
 
             if OFFENSE:
                 actor.model_load(LOGPATH+"models/targetcloser4_1_2000000.0.tflearn", True)
-                actor.model_load(LOGPATH+"models/targetfarther4_1_2000000.0.tflearn", False)
+                actor.model_load(LOGPATH+"models/targetcloser4_1_2000000.0.tflearn", False)
 
             print "INITIALIZED VARIABLES"
 
