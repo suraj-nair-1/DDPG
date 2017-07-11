@@ -93,7 +93,7 @@ def main(_):
             # feature set. See feature sets in hfo.py/hfo.hpp.
             print "CONNECTING ..."
             if OFFENSE:
-                EPS_ITERATIONS_ANNEAL = 1000
+                EPS_ITERATIONS_ANNEAL = 1000000
                 hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
                     'bin/teams/base/config/formations-dt', PORT,
                     'localhost', 'base_left', False)
@@ -132,10 +132,6 @@ def main(_):
 
             # Set up summary Ops
             sess.run(tf.global_variables_initializer())
-
-            if OFFENSE:
-                actor.model_load(LOGPATH+"models/targetcloser4_1_2000000.0.tflearn", True)
-                actor.model_load(LOGPATH+"models/targetcloser4_1_2000000.0.tflearn", False)
 
             print "INITIALIZED VARIABLES"
 
@@ -408,7 +404,7 @@ def main(_):
                             critic.update_target_network()
 
                             if (ITERATIONS % 1000000) == 0:
-                                    actor.model_save(LOGPATH + "models/target5_"+str(OFFENSE)+"_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                    actor.model_save(LOGPATH + "models/target6_"+str(OFFENSE)+"_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
                             # break
                         ITERATIONS += 1
                         ep_reward += r
@@ -428,7 +424,7 @@ def main(_):
                                 sys.exit()
 
 
-                            f = open(LOGPATH +'logging/logs64_' + str(PLAYER) + '.txt', 'a')
+                            f = open(LOGPATH +'logging/logs65_' + str(PLAYER) + '.txt', 'a')
                             f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                                 + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                                 str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
