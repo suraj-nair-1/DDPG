@@ -216,18 +216,18 @@ def main(_):
                         send_data  = np.array([curr_ball_prox, curr_kickable])
 
 
-                        np.savetxt(LOGPATH+'actions2_'+str(OFFENSE) + "_"+str(PLAYER)+'.txt', a.flatten())
+                        np.savetxt(LOGPATH+'actions3_'+str(OFFENSE) + "_"+str(PLAYER)+'.txt', a.flatten())
 
 
                         # print PLAYER, curr_ball_prox
                         while True:
                             try:
                                 if OFFENSE:
-                                    other1 = np.loadtxt(LOGPATH+'actions2_'+str(OFFENSE) + "_"+str(OTHERPLAYER)+'.txt')
-                                    other2 = np.loadtxt(LOGPATH+'actions2_0_3.txt')
+                                    other1 = np.loadtxt(LOGPATH+'actions3_'+str(OFFENSE) + "_"+str(OTHERPLAYER)+'.txt')
+                                    other2 = np.loadtxt(LOGPATH+'actions3_0_3.txt')
                                 else:
-                                    other1 = np.loadtxt(LOGPATH+'actions2_1_'+str(1)+'.txt')
-                                    other2 = np.loadtxt(LOGPATH+'actions2_1_'+str(2)+'.txt')
+                                    other1 = np.loadtxt(LOGPATH+'actions3_1_'+str(1)+'.txt')
+                                    other2 = np.loadtxt(LOGPATH+'actions3_1_'+str(2)+'.txt')
 
                                 other = np.concatenate([other1, other2], axis = 0)
                                 assert(other.shape == (20,))
@@ -296,13 +296,16 @@ def main(_):
                                     if int(terminal) == 1:
                                         NUM_GOALS += 1
                                         r += -5
+                                    elif int(terminal) == 2:
+                                        r += 5
+
                                 else:
                                     r +=  (curr_ball_prox - old_ball_prox)
 
                                     r += 3.0 * float(curr_goal_dist - old_goal_dist)
                                     # print r
                                     if (old_kickable == -1) and (curr_kickable == 1):
-                                        r += 5
+                                        r += 1
 
 
                                 # print r
@@ -404,7 +407,7 @@ def main(_):
                             critic.update_target_network()
 
                             if (ITERATIONS % 1000000) == 0:
-                                    actor.model_save(LOGPATH + "models/target8_"+str(OFFENSE)+"_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                    actor.model_save(LOGPATH + "models/target9_"+str(OFFENSE)+"_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
                             # break
                         ITERATIONS += 1
                         ep_reward += r
@@ -424,7 +427,7 @@ def main(_):
                                 sys.exit()
 
 
-                            f = open(LOGPATH +'logging/logs67_' + str(PLAYER) + '.txt', 'a')
+                            f = open(LOGPATH +'logging/logs68_' + str(PLAYER) + '.txt', 'a')
                             f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                                 + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                                 str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
