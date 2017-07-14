@@ -76,10 +76,11 @@ class CriticNetwork(object):
 
         otheraction = tflearn.input_data(shape=[None, 2 * self.a_dim])
 
-        in1 = tflearn.merge([inputs, action, otheraction], 'concat')
+        in1 = tflearn.merge([inputs, action], 'concat')
 
         l = tflearn.fully_connected(in1, 1024)
         la = tflearn.activations.leaky_relu(l, alpha=-.01)
+        la = tflearn.merge([la, otheraction], 'concat')
         l2 = tflearn.fully_connected(la, 512)
         l2a = tflearn.activations.leaky_relu(l2, alpha=-.01)
         l3 = tflearn.fully_connected(l2a, 256)
