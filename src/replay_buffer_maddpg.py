@@ -49,7 +49,7 @@ class ReplayBuffer(object):
         batch2 = random.sample(best, batch_size / 4)
         batch3 = random.sample(self.buffer, batch_size / 2)
         batch = batch1 + batch2 + batch3
-        batch = random.shuffle(batch)
+        random.shuffle(batch)
 
         s_batch = np.array([_[0] for _ in batch])
         a_batch = np.array([_[1] for _ in batch])
