@@ -1,11 +1,11 @@
 #!/bin/bash
-./bin/HFO --frames-per-trial=500 --untouched-time=500 --fullstate --headless --offense-agents=2 --defense-agents=1 --agent-play-goalie --no-logging --seed 11 --port 6500 &
+./bin/HFO --frames-per-trial=500 --untouched-time=500 --fullstate --headless --offense-agents=2 --defense-agents=1 --agent-play-goalie --no-logging --seed 322 --port 3200 &
 sleep 5
-./../DDPG/src/maddpg_noswitch.py 6500 1 1 11 &
+./../DDPG/src/maddpg_noswitch.py 3200 1 1 322 &
 sleep 5
-./../DDPG/src/maddpg_noswitch.py 6500 1 2 11 &
+./../DDPG/src/maddpg_noswitch.py 3200 1 2 322 &
 sleep 5
-./../DDPG/src/maddpg_noswitch.py 6500 0 3 11 &
+./../DDPG/src/maddpg_noswitch.py 3200 0 3 322 &
 sleep 5
 # python ../DDPG/tflearn/continuous_space_test_agent.py 6000 &
 
