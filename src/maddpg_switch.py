@@ -64,7 +64,7 @@ def main(_):
     PORT, OFFENSE, PLAYER, RANDOM_SEED = map(int, sys.argv[1:])
     print PORT, OFFENSE, PLAYER, RANDOM_SEED
 
-    LOGNUM = 73
+    LOGNUM = 74
 
     if GPUENABLED:
         device = "/gpu:0"
