@@ -11,16 +11,17 @@ import numpy as np
 import tensorflow as tf
 import tflearn
 import os
+import traceback
 
 import time
 
-from replay_buffer import ReplayBuffer
+from replay_buffer_maddpg import ReplayBuffer
 from actor_hfo import ActorNetwork
-from critic_hfo import CriticNetwork
+from critic_hfo_maddpg import CriticNetwork
 
 
-# LOGPATH = "../DDPG/"
-LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+LOGPATH = "../DDPG/"
+# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 
 PRIORITIZED = True
 
@@ -35,11 +36,11 @@ CRITIC_LEARNING_RATE = .001
 # Discount factor
 GAMMA = 0.99
 # Soft target update param
-TAU = 0.0001
+TAU = 0.001
 
 # Noise for exploration
 EPS_GREEDY_INIT = 1.0
-EPS_ITERATIONS_ANNEAL = 100000
+# EPS_ITERATIONS_ANNEAL = 1000000
 
 # sigma = 1.0
 # sigma_ep_anneal = 2000
@@ -58,23 +59,12 @@ MINIBATCH_SIZE = 1024
 GPUENABLED = False
 ORACLE = False
 
-# ===========================
-#   Tensorflow Summary Ops
-# ===========================
-# def build_summaries():
-#     episode_reward = tf.Variable(0.)
-#     tf.summary.scalar("Reward", episode_reward)
-#     episode_ave_max_q = tf.Variable(0.)
-#     tf.summary.scalar("Qmax Value", episode_ave_max_q)
-
-#     summary_vars = [episode_reward, episode_ave_max_q]
-#     summary_ops = tf.summary.merge_all()
-
-#     return summary_ops, summary_vars
-
 
 def main(_):
-    RANDOM_SEED = int(sys.argv[3])
+    PORT, OFFENSE, PLAYER, RANDOM_SEED = map(int, sys.argv[1:])
+    print PORT, OFFENSE, PLAYER, RANDOM_SEED
+
+    LOGNUM = 73
 
     if GPUENABLED:
         device = "/gpu:0"
@@ -89,15 +79,22 @@ def main(_):
             # print "AA"
             # Connect to the server with the specified
             # feature set. See feature sets in hfo.py/hfo.hpp.
-            print "CONNNNNECTING"
-            hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
-                                'bin/teams/base/config/formations-dt', int(sys.argv[1]),
-                                'localhost', 'base_left', False)
+            print "CONNECTING ..."
+            if OFFENSE:
+                EPS_ITERATIONS_ANNEAL = 1000000
+                hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
+                    'bin/teams/base/config/formations-dt', PORT,
+                    'localhost', 'base_left', False)
+            else:
+                EPS_ITERATIONS_ANNEAL = 3000000
+                hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
+                    'bin/teams/base/config/formations-dt', PORT,
+                    'localhost', 'base_right', True)
+
             print "CONNECTED"
             ITERATIONS = 0.0
             NUM_GOALS = 0.0
-            CURR_MODEL = int(sys.argv[2])
-            PLAYER = int(sys.argv[2])
+            CURR_MODEL = PLAYER
 
             # print "AAAA"
 
@@ -109,48 +106,82 @@ def main(_):
             low_action_bound = np.array([0., -180., -180., -180., 0., -180.])
             high_action_bound = np.array([100., 180., 180., 180., 100., 180.])
 
-            actor_closer = ActorNetwork(sess, state_dim, action_dim, low_action_bound, \
-                high_action_bound, ACTOR_LEARNING_RATE, TAU, LOGPATH, sys.argv[2])
+            if OFFENSE:
+
+                actor_closer = ActorNetwork(sess, state_dim, action_dim, low_action_bound, \
+                    high_action_bound, ACTOR_LEARNING_RATE, TAU, LOGPATH, sys.argv[2])
+
+                critic_closer = CriticNetwork(sess, state_dim, action_dim, low_action_bound, high_action_bound, \
+                    CRITIC_LEARNING_RATE, TAU, actor_closer.get_num_trainable_vars(), MINIBATCH_SIZE, LOGPATH)
+
+                actor_farther = ActorNetwork(sess, state_dim, action_dim, low_action_bound, \
+                    high_action_bound, ACTOR_LEARNING_RATE, TAU, LOGPATH, sys.argv[2])
+
+                critic_farther = CriticNetwork(sess, state_dim, action_dim, low_action_bound, high_action_bound, \
+                    CRITIC_LEARNING_RATE, TAU, actor_farther.get_num_trainable_vars(), MINIBATCH_SIZE, LOGPATH)
+
+                # actor = ActorNetwork(sess, state_dim, action_dim, low_action_bound, \
+                #     high_action_bound, ACTOR_LEARNING_RATE, TAU, LOGPATH, PLAYER)
+
+                # critic = CriticNetwork(sess, state_dim, action_dim, low_action_bound, high_action_bound, \
+                #     CRITIC_LEARNING_RATE, TAU, actor.get_num_trainable_vars(), MINIBATCH_SIZE, LOGPATH)
 
 
-            critic_closer = CriticNetwork(sess, state_dim, action_dim, low_action_bound, high_action_bound, \
-                CRITIC_LEARNING_RATE, TAU, actor_closer.get_num_trainable_vars(), MINIBATCH_SIZE, LOGPATH)
+                if PLAYER == 1:
+                    OTHERPLAYER = 2
+                    actor = actor_closer
+                    critic = critic_closer
+                else:
+                    OTHERPLAYER = 1
+                    actor = actor_farther
+                    critic = critic_farther
 
-            actor_farther = ActorNetwork(sess, state_dim, action_dim, low_action_bound, \
-                high_action_bound, ACTOR_LEARNING_RATE, TAU, LOGPATH, sys.argv[2])
+                # Set up summary Ops
+                sess.run(tf.global_variables_initializer())
 
-            critic_farther = CriticNetwork(sess, state_dim, action_dim, low_action_bound, high_action_bound, \
-                CRITIC_LEARNING_RATE, TAU, actor_farther.get_num_trainable_vars(), MINIBATCH_SIZE, LOGPATH)
+                print "INITIALIZED VARIABLES"
 
-            if PLAYER == 1:
-                OTHERPLAYER = 2
-                actor = actor_closer
-                critic = critic_closer
+
+                # Initialize target network weights
+                actor_closer.update_target_network()
+                critic_closer.update_target_network()
+                # Initialize target network weights
+                actor_farther.update_target_network()
+                critic_farther.update_target_network()
+
+                # Initialize replay memory
+                replay_buffer_closer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED)
+                replay_buffer_farther = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED)
+                if PLAYER == 1:
+                    replay_buffer = replay_buffer_closer
+                else:
+                    replay_buffer = replay_buffer_farther
+
             else:
-                OTHERPLAYER = 1
-                actor = actor_farther
-                critic = critic_farther
+                actor = ActorNetwork(sess, state_dim, action_dim, low_action_bound, \
+                high_action_bound, ACTOR_LEARNING_RATE, TAU, LOGPATH, PLAYER)
 
-            # Set up summary Ops
-            sess.run(tf.global_variables_initializer())
+                critic = CriticNetwork(sess, state_dim, action_dim, low_action_bound, high_action_bound, \
+                    CRITIC_LEARNING_RATE, TAU, actor.get_num_trainable_vars(), MINIBATCH_SIZE, LOGPATH)
 
-            actor_closer.model_load(LOGPATH+"models/targetcloser4_1_2000000.0.tflearn", True)
-            actor_farther.model_load(LOGPATH+"models/targetfarther4_1_2000000.0.tflearn", True)
-            actor_closer.model_load(LOGPATH+"models/targetcloser4_1_2000000.0.tflearn", False)
-            actor_farther.model_load(LOGPATH+"models/targetfarther4_1_2000000.0.tflearn", False)
 
-            # Initialize target network weights
-            actor.update_target_network()
-            critic.update_target_network()
+                if PLAYER == 1:
+                    OTHERPLAYER = 2
+                else:
+                    OTHERPLAYER = 1
 
-            # Initialize replay memory
-            replay_buffer_closer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED)
-            replay_buffer_farther = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED)
-            if PLAYER == 1:
-                replay_buffer = replay_buffer_closer
-            else:
-                replay_buffer = replay_buffer_farther
+                # Set up summary Ops
+                sess.run(tf.global_variables_initializer())
 
+                print "INITIALIZED VARIABLES"
+
+
+                # Initialize target network weights
+                actor.update_target_network()
+                critic.update_target_network()
+
+                # Initialize replay memory
+                replay_buffer = ReplayBuffer(BUFFER_SIZE, RANDOM_SEED)
             num_0_row = 0
 
 
@@ -217,31 +248,48 @@ def main(_):
 
                         # Get new state s_(t+1)
                         s1 = hfo.getState()
-                        # s1 = np.concatenate((hfo.getState(), np.ones((8,))), axis =0)
-
-                        # curr_ball_prox = 1 - 2*(np.sqrt((s1[3] - s1[0])**2 + (s1[4]-s1[1])**2) / np.sqrt(20))
-                        # curr_goal_dist = np.sqrt((s1[3] - 1)**2 + (s1[4])**2)
-                        # curr_kickable = s[5]
-                        # if PLAYER == 1:
-                        #     print s1[66:]
 
                         curr_ball_prox = s1[53]
                         curr_kickable = s1[12]
 
-                        send_data  = np.array([curr_ball_prox, curr_kickable])
-                        np.savetxt(LOGPATH+'intermediate1'+str(PLAYER)+'.txt', send_data.flatten())
+                        np.savetxt(LOGPATH+'actions'+str(LOGNUM)+'_'+str(OFFENSE) + "_"+str(PLAYER)+'.txt', a.flatten())
 
 
                         # print PLAYER, curr_ball_prox
                         while True:
                             try:
-                                aaa= np.loadtxt(LOGPATH + "intermediate1"+str(OTHERPLAYER)+".txt")
-                                if len(aaa) == 2:
-                                    otherprox, otherkickable = aaa
-                                    break
+                                if OFFENSE:
+                                    other1 = np.loadtxt(LOGPATH+'actions'+str(LOGNUM)+'_'+str(OFFENSE) + "_"+str(OTHERPLAYER)+'.txt')
+                                    other2 = np.loadtxt(LOGPATH+'actions'+str(LOGNUM)+'_0_3.txt')
+                                else:
+                                    other1 = np.loadtxt(LOGPATH+'actions'+str(LOGNUM)+'_1_'+str(1)+'.txt')
+                                    other2 = np.loadtxt(LOGPATH+'actions'+str(LOGNUM)+'_1_'+str(2)+'.txt')
+
+                                other = np.concatenate([other1, other2], axis = 0)
+                                assert(other.shape == (20,))
+                                break
                             except:
                                 print "PLAYER", PLAYER, "FETCH FAILED"
+                                # print e
                                 continue
+
+                        # print other.shape
+                        if OFFENSE:
+                            send_data  = np.array([curr_ball_prox, curr_kickable])
+                            np.savetxt(LOGPATH+'intermediate'+str(LOGNUM)+'_'+str(PLAYER)+'.txt', send_data.flatten())
+
+
+                            # print PLAYER, curr_ball_prox
+                            while True:
+                                try:
+                                    aaa= np.loadtxt(LOGPATH + "intermediate"+str(LOGNUM)+'_'+str(OTHERPLAYER)+".txt")
+                                    if len(aaa) == 2:
+                                        otherprox, otherkickable = aaa
+                                        break
+                                except:
+                                    print "PLAYER", PLAYER, "FETCH FAILED"
+                                    continue
+
 
 
 
@@ -262,7 +310,7 @@ def main(_):
                         # Law of Cosines
                         curr_goal_dist = np.sqrt(ball_dist*ball_dist + goal_dist*goal_dist - 2.*ball_dist*goal_dist*np.cos(alpha))
 
-                        val = 2.0 * ((np.max([curr_ball_prox + 1, otherprox + 1]) / np.sum([curr_ball_prox + 1, otherprox + 1])) - 0.5)
+                        # val = 2.0 * ((np.max([curr_ball_prox + 1, otherprox + 1]) / np.sum([curr_ball_prox + 1, otherprox + 1])) - 0.5)
 
                         # print curr_ball_prox
                         # print curr_goal_dist
@@ -273,34 +321,55 @@ def main(_):
                         # print j
                         if j != 0:
 
-                            # If game has finished, calculate reward based on whether or not a goal was scored
-                            if terminal != IN_GAME:
-                                if int(terminal) == 1:
-                                    NUM_GOALS += 1
-                                    r += 5
+                            if OFFENSE:
+
+                                # If game has finished, calculate reward based on whether or not a goal was scored
+                                if terminal != IN_GAME:
+                                    if int(terminal) == 1:
+                                        NUM_GOALS += 1
+                                        r += 5
+                                else:
+                                    # Movement to ball
+                                    r +=  (curr_ball_prox - old_ball_prox)
+
+                                    # Seperation between players
+                                    # r += 0.2 * (val - oldval)
+                                    # ep_val_r += (val - oldval)
+
+                                    r += -3.0 * float(curr_goal_dist - old_goal_dist)
+                                    # print r
+                                    if (old_kickable == -1) and (curr_kickable == 1):
+                                        r += 1
+                                    # if (old_other_kickable == -1) and (otherkickable == 1):
+                                    #     r += 1
+
                             else:
-                                # Movement to ball
-                                r +=  (curr_ball_prox - old_ball_prox)
+                                if terminal != IN_GAME:
+                                    if int(terminal) == 1:
+                                        NUM_GOALS += 1
+                                        r += -5
+                                    elif int(terminal) == 2:
+                                        r += 5
 
-                                # Seperation between players
-                                r += 0.2 * (val - oldval)
-                                ep_val_r += (val - oldval)
+                                else:
+                                    r +=  (curr_ball_prox - old_ball_prox)
 
-                                r += -3.0 * float(curr_goal_dist - old_goal_dist)
-                                # print r
-                                if (old_kickable == -1) and (curr_kickable == 1):
-                                    r += 1
-                                if (old_other_kickable == -1) and (otherkickable == 1):
-                                    r += 1
+                                    r += 3.0 * float(curr_goal_dist - old_goal_dist)
+                                    # print r
+                                    if (old_kickable == -1) and (curr_kickable == 1):
+                                        r += 1
+
+
                                 # print r
 
                         # print "\n\n\n"
                         old_ball_prox = curr_ball_prox
                         old_goal_dist = curr_goal_dist
                         old_kickable = curr_kickable
-                        old_other_kickable = otherkickable
-                        old_other_ball_prox = otherprox
-                        oldval = val
+                        if OFFENSE:
+                            old_other_kickable = otherkickable
+                            old_other_ball_prox = otherprox
+                        # oldval = val
 
                         # if r == 0:
                         #     r = -1
@@ -308,43 +377,36 @@ def main(_):
                         
 
 
-                        replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), r, \
+                        replay_buffer.add(np.reshape(s, (actor.s_dim,)), np.reshape(a, (actor.a_dim,)), np.reshape(other, (2 *actor.a_dim,)), r, \
                             terminal, np.reshape(s1, (actor.s_dim,)))
 
-
-                        # Determine Model Switching
-                        # otherprox = np.loadtxt(LOGPATH + "intermediate"+str(OTHERPLAYER)+".txt", delimiter=",")
-
-                        # print
-                        # print "PLAYER", PLAYER, "CURR_MODEL", CURR_MODEL
-                        # print otherprox
-                        if otherprox < old_ball_prox:
-                            if CURR_MODEL == 2:
-                                actor = actor_closer
-                                critic = critic_closer
-                                replay_buffer = replay_buffer_closer
-                                ep_switches += 1
-                                CURR_MODEL = 1
-
+                        if OFFENSE:
+                            if otherprox < old_ball_prox:
+                                if CURR_MODEL == 2:
+                                    actor = actor_closer
+                                    critic = critic_closer
+                                    replay_buffer = replay_buffer_closer
+                                    ep_switches += 1
+                                    CURR_MODEL = 1
                                 
-                            
-                        else:
-                            if CURR_MODEL == 1:
-                                actor = actor_farther
-                                critic = critic_farther
-                                replay_buffer = replay_buffer_farther
-                                ep_switches += 1
-                                CURR_MODEL = 2
+                            else:
+                                if CURR_MODEL == 1:
+                                    actor = actor_farther
+                                    critic = critic_farther
+                                    replay_buffer = replay_buffer_farther
+                                    ep_switches += 1
+                                    CURR_MODEL = 2
+
 
                         # TRAINING STEP
                         ###########################################################
                         if (replay_buffer.size() > MINIBATCH_SIZE) and (ITERATIONS % 10 == 0):
 
-                            if (not PRIORITIZED) or (ITERATIONS < 200000) or (NUM_GOALS > 50):
-                                s_batch, a_batch, r_batch, t_batch, s1_batch = \
+                            if (not PRIORITIZED) or (ITERATIONS < 200000) or (NUM_GOALS > 20):
+                                s_batch, a_batch, othera_batch, r_batch, t_batch, s1_batch = \
                                     replay_buffer.sample_batch(MINIBATCH_SIZE)
                             else:
-                                s_batch, a_batch, r_batch, t_batch, s1_batch = \
+                                s_batch, a_batch,  othera_batch,  r_batch, t_batch, s1_batch = \
                                     replay_buffer.sample_batch_prioritized(MINIBATCH_SIZE)
 
                             ep_updates += 1
@@ -373,12 +435,12 @@ def main(_):
                                 kick_batch.append([0, 0, 0, 1, 0, 0, 0, 0, np.random.uniform(0, 100) , np.random.uniform(-180, 180)])
 
                                 
-                            target_good = critic.predict_target(s_batch, np.array(good_batch))
-                            target_bad = critic.predict_target(s_batch, np.array(bad_batch))
-                            target_move = critic.predict_target(s_batch, np.array(move_batch))
-                            target_turn = critic.predict_target(s_batch, np.array(turn_batch))
-                            target_tackle = critic.predict_target(s_batch, np.array(tackle_batch))
-                            target_kick = critic.predict_target(s_batch, np.array(kick_batch))
+                            target_good = critic.predict_target(s_batch, np.array(good_batch), othera_batch)
+                            target_bad = critic.predict_target(s_batch, np.array(bad_batch), othera_batch)
+                            target_move = critic.predict_target(s_batch, np.array(move_batch), othera_batch)
+                            target_turn = critic.predict_target(s_batch, np.array(turn_batch), othera_batch)
+                            target_tackle = critic.predict_target(s_batch, np.array(tackle_batch), othera_batch)
+                            target_kick = critic.predict_target(s_batch, np.array(kick_batch), othera_batch)
 
                             ep_good_q += np.mean(target_good)
                             ep_bad_q += np.mean(target_bad)
@@ -387,7 +449,7 @@ def main(_):
                             ep_tackle_q += np.mean(target_tackle)
                             ep_kick_q += np.mean(target_kick)
 
-                            target_q = critic.predict_target(s1_batch, actor.predict_target(s1_batch))
+                            target_q = critic.predict_target(s1_batch, actor.predict_target(s1_batch), othera_batch)
 
                             y_i = []
                             for k in xrange(MINIBATCH_SIZE):
@@ -399,7 +461,7 @@ def main(_):
                             # Update the critic given the targets
                             # print y_i
                             # print predicted_q_value
-                            predicted_q_value, ep_critic_loss, _ = critic.train(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
+                            predicted_q_value, ep_critic_loss, _ = critic.train(s_batch, a_batch, othera_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
                             # predicted_q_value, ep_critic_loss = critic.getloss(s_batch, a_batch, np.reshape(y_i, (MINIBATCH_SIZE, 1)))
 
                             ep_ave_max_q += np.mean(predicted_q_value)
@@ -407,16 +469,20 @@ def main(_):
 
                             # Update the actor policy using the sampled gradient
                             a_outs = actor.predict(s_batch)
-                            grads = critic.action_gradients(s_batch, a_outs)
+                            grads = critic.action_gradients(s_batch, a_outs, othera_batch)
                             actor.train(s_batch, grads[0])
 
                             # Update target networks
                             actor.update_target_network()
                             critic.update_target_network()
 
+
                             if (ITERATIONS % 1000000) == 0:
-                                    actor_farther.model_save(LOGPATH + "models/targetfarther16_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
-                                    actor_closer.model_save(LOGPATH + "models/targetcloser16_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                    if OFFENSE:
+                                        actor_closer.model_save(LOGPATH + "models/targetcloser_"+str(LOGNUM)+"_"+str(OFFENSE)+"_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                        actor_farther.model_save(LOGPATH + "models/targetfarther_"+str(LOGNUM)+"_"+str(OFFENSE)+"_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                    else:
+                                        actor.model_save(LOGPATH + "models/target_"+str(LOGNUM)+"_"+str(OFFENSE)+"_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
                             # break
                         ITERATIONS += 1
                         ep_reward += r
@@ -436,7 +502,7 @@ def main(_):
                                 sys.exit()
 
 
-                            f = open(LOGPATH +'logging/logs56_' + str(PLAYER) + '.txt', 'a')
+                            f = open(LOGPATH +'logging/logs'+str(LOGNUM)+'_' + str(PLAYER) + '.txt', 'a')
                             f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                                 + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                                 str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
@@ -456,6 +522,7 @@ def main(_):
                 except Exception as e:
                     print "EPISODE", i, "FAILED"
                     print str(e)
+                    print traceback.print_exc()
                     sys.exit()
                     break
 

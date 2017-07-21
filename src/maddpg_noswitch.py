@@ -404,7 +404,7 @@ def main(_):
                             critic.update_target_network()
 
                             if (ITERATIONS % 1000000) == 0:
-                                    actor.model_save(LOGPATH + "models/target13_"+str(OFFENSE)+"_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                    actor.model_save(LOGPATH + "models/target14_"+str(OFFENSE)+"_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
                             # break
                         ITERATIONS += 1
                         ep_reward += r
@@ -424,7 +424,7 @@ def main(_):
                                 sys.exit()
 
 
-                            f = open(LOGPATH +'logging/logs72_' + str(PLAYER) + '.txt', 'a')
+                            f = open(LOGPATH +'logging/logs73_' + str(PLAYER) + '.txt', 'a')
                             f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                                 + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                                 str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \

@@ -38,3 +38,21 @@ class ActorNetworkReplay(object):
 
     def model_predict(self, inps):
         return self.model.predict(inps)
+
+    def add_noise(self, a, eps):
+        if (np.random.random_sample() <= eps) or (np.isnan(a).any()):
+            # print "RANDOM AF &&&&&&&&&&&&&&&&&"
+            acts = np.random.uniform(1, 10, 4)
+            a[:4] = acts / np.sum(acts)
+            a[4] = np.random.uniform(0, 100)
+            a[5] = np.random.uniform(-180, 180)
+            a[6] = np.random.uniform(-180, 180)
+            a[7] = np.random.uniform(-180, 180)
+            a[8] = np.random.uniform(0, 100)
+            a[9] = np.random.uniform(-180, 180)
+        else:
+            print a
+
+        index = np.argmax(a[:4])
+
+        return index, a

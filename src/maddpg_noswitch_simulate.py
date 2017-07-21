@@ -87,9 +87,9 @@ def main(_):
             a = actor.model_predict(s_noise)[0]
             # model_a = a\.predict(s_noise)[0]
             # print a
-            index = np.argmax(a[:4])
-            # model_index, model_a = model_actor.add_noise(model_a, 0)
-            # print "******************************"
+            index, a = actor.add_noise(a, 0.0)
+
+
             if index == 0:
                 action  = (DASH, a[4], a[5])
             elif index == 1:
