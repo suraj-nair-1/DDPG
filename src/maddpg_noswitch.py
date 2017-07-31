@@ -78,7 +78,7 @@ def main(_):
     PORT, OFFENSE, PLAYER, RANDOM_SEED = map(int, sys.argv[1:])
     print PORT, OFFENSE, PLAYER, RANDOM_SEED
 
-    LOGNUM = 75
+    LOGNUM = 76
 
     if GPUENABLED:
         device = "/gpu:0"
@@ -285,8 +285,8 @@ def main(_):
 
                                     r += -3.0 * float(curr_goal_dist - old_goal_dist)
                                     # print r
-                                    if (old_kickable == -1) and (curr_kickable == 1):
-                                        r += 1
+                                    # if (old_kickable == -1) and (curr_kickable == 1):
+                                    #     r += 1
                                     # if (old_other_kickable == -1) and (otherkickable == 1):
                                     #     r += 1
 
@@ -303,8 +303,8 @@ def main(_):
 
                                     r += 3.0 * float(curr_goal_dist - old_goal_dist)
                                     # print r
-                                    if (old_kickable == -1) and (curr_kickable == 1):
-                                        r += 1
+                                    # if (old_kickable == -1) and (curr_kickable == 1):
+                                    #     r += 1
 
 
                                 # print r
