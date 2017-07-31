@@ -78,6 +78,8 @@ def main(_):
     PORT, OFFENSE, PLAYER, RANDOM_SEED = map(int, sys.argv[1:])
     print PORT, OFFENSE, PLAYER, RANDOM_SEED
 
+    LOGNUM = 75
+
     if GPUENABLED:
         device = "/gpu:0"
     else:
@@ -213,18 +215,18 @@ def main(_):
                         curr_ball_prox = s1[53]
                         curr_kickable = s1[12]
 
-                        np.savetxt(LOGPATH+'actions7_'+str(OFFENSE) + "_"+str(PLAYER)+'.txt', a.flatten())
+                        np.savetxt(LOGPATH+'actions'+str(LOGNUM)+'_'+str(OFFENSE) + "_"+str(PLAYER)+'.txt', a.flatten())
 
 
                         # print PLAYER, curr_ball_prox
                         while True:
                             try:
                                 if OFFENSE:
-                                    other1 = np.loadtxt(LOGPATH+'actions7_'+str(OFFENSE) + "_"+str(OTHERPLAYER)+'.txt')
-                                    other2 = np.loadtxt(LOGPATH+'actions7_0_3.txt')
+                                    other1 = np.loadtxt(LOGPATH+'actions'+str(LOGNUM)+'_'+str(OFFENSE) + "_"+str(OTHERPLAYER)+'.txt')
+                                    other2 = np.loadtxt(LOGPATH+'actions'+str(LOGNUM)+'_0_3.txt')
                                 else:
-                                    other1 = np.loadtxt(LOGPATH+'actions7_1_'+str(1)+'.txt')
-                                    other2 = np.loadtxt(LOGPATH+'actions7_1_'+str(2)+'.txt')
+                                    other1 = np.loadtxt(LOGPATH+'actions'+str(LOGNUM)+'_1_'+str(1)+'.txt')
+                                    other2 = np.loadtxt(LOGPATH+'actions'+str(LOGNUM)+'_1_'+str(2)+'.txt')
 
                                 other = np.concatenate([other1, other2], axis = 0)
                                 assert(other.shape == (20,))
@@ -404,7 +406,7 @@ def main(_):
                             critic.update_target_network()
 
                             if (ITERATIONS % 1000000) == 0:
-                                    actor.model_save(LOGPATH + "models/target14_"+str(OFFENSE)+"_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
+                                actor.model_save(LOGPATH + "models/target_"+str(LOGNUM)+"_"+str(OFFENSE)+"_"+str(PLAYER)+"_"+str(ITERATIONS)+".tflearn", target=True)
                             # break
                         ITERATIONS += 1
                         ep_reward += r
@@ -424,7 +426,7 @@ def main(_):
                                 sys.exit()
 
 
-                            f = open(LOGPATH +'logging/logs73_' + str(PLAYER) + '.txt', 'a')
+                            f = open(LOGPATH +'logging/logs'+str(LOGNUM)+'_' + str(PLAYER) + '.txt', 'a')
                             f.write(str(float(ep_reward)) + "," + str(ep_ave_max_q / float(ep_updates+1))+ "," \
                                 + str(float(critic_loss)/ float(ep_updates+1)) + "," +  \
                                 str(EPS_GREEDY_INIT - ITERATIONS/ EPS_ITERATIONS_ANNEAL) + \
