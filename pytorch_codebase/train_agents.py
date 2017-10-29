@@ -38,7 +38,7 @@ episodes_before_train = 1
 
 GPUENABLED = False
 ORACLE = False
-PORT = 4500 
+PORT = 4500
 
 def connect(slp):
     time.sleep(slp)
@@ -71,9 +71,48 @@ def take_action_and_step(inpt):
     terminal = env.step()
     print "STEP FINISHED"
     s1 = env.getState()
-    return s1
+    return s1, terminal
 
 
+def get_curr_state_vars(s1):
+    curr_ball_prox = s1[53]
+    curr_kickable = s1[12]
+    goal_proximity = s1[15]
+    ball_dist = 1.0 - curr_ball_prox
+    goal_dist = 1.0 - goal_proximity
+    ball_ang_sin_rad = s1[51]
+    ball_ang_cos_rad = s1[52]
+    ball_ang_rad = np.arccos(ball_ang_cos_rad)
+    if ball_ang_sin_rad < 0:
+        ball_ang_rad *= -1.
+    goal_ang_sin_rad = s1[13]
+    goal_ang_cos_rad = s1[14]
+    goal_ang_rad = np.arccos(goal_ang_cos_rad)
+    if goal_ang_sin_rad < 0:
+        goal_ang_rad *= -1.
+    alpha = max(ball_ang_rad, goal_ang_rad) - min(ball_ang_rad, goal_ang_rad)
+    # Law of Cosines
+    curr_goal_dist = np.sqrt(ball_dist*ball_dist + goal_dist*goal_dist - 2.*ball_dist*goal_dist*np.cos(alpha))
+
+    return curr_ball_prox, curr_goal_dist, curr_kickable
+
+
+def get_rewards(terminal, curr_ball_prox, curr_goal_dist, curr_kickable,
+    old_ball_prox, old_goal_dist, old_kickable):
+
+    r = 0.0
+
+    # If game has finished, calculate reward based on whether or not a goal was scored
+    if terminal != IN_GAME:
+        if int(terminal) == 1:
+            goal_made = True
+            r += 5
+    else:
+        # Movement to ball
+        r +=  (curr_ball_prox - old_ball_prox)
+        r += -3.0 * float(curr_goal_dist - old_goal_dist)
+
+    return r, goal_made
 
 
 def run():
@@ -140,77 +179,96 @@ def run():
             print actions.shape
 
             inpt = zip(actions, agent_envs)
-            states1 = p.map(take_action_and_step, inpt)
-            print states1.shape
-            assert False
-            # action = add_noise
-            states1 = []
-            rewards = []
-            ################################
-            # TODO Anshul: Switch this for loop 
-            # to a function and use map
-            ################################
-            for i in range(actions.size()[0]):
-                env = agent_envs[i]
-                a = actions[i]
-                index = np.argmax(a[:4])
-                if index == 0:
-                    action  = (DASH, a[4], a[5])
-                elif index == 1:
-                    action = (TURN, a[6])
-                elif index == 2:
-                    action = (TACKLE, a[7])
-                else:
-                    action = (KICK, a[8], a[9])
-                print "STEPPING"
-                env.act(*action)
-                terminal = env.step()
-                print "STEP FINISHED"
-                s1 = env.getState()
-                states1.append(s1)
+            states1, terminals = p.map(take_action_and_step, inpt)
 
+            curr_ball_proxs, curr_goal_dists, curr_kickables = p.map(get_curr_state_vars, states1)
 
-                curr_ball_prox = s1[53]
-                curr_kickable = s1[12]
-                goal_proximity = s1[15]
-                ball_dist = 1.0 - curr_ball_prox
-                goal_dist = 1.0 - goal_proximity
-                ball_ang_sin_rad = s1[51]
-                ball_ang_cos_rad = s1[52]
-                ball_ang_rad = np.arccos(ball_ang_cos_rad)
-                if ball_ang_sin_rad < 0:
-                    ball_ang_rad *= -1.
-                goal_ang_sin_rad = s1[13]
-                goal_ang_cos_rad = s1[14]
-                goal_ang_rad = np.arccos(goal_ang_cos_rad)
-                if goal_ang_sin_rad < 0:
-                    goal_ang_rad *= -1.
-                alpha = max(ball_ang_rad, goal_ang_rad) - min(ball_ang_rad, goal_ang_rad)
-                # Law of Cosines
-                curr_goal_dist = np.sqrt(ball_dist*ball_dist + goal_dist*goal_dist - 2.*ball_dist*goal_dist*np.cos(alpha))
+            action_rewards = np.zeros((n_agents,))
+            if j != 0:
+                inpt = zip(terminals, curr_ball_proxs, curr_goal_dists,
+                    curr_kickables, old_ball_proxs, old_goal_dists, old_kickables)
+                action_rewards, goal_made = p.map(get_rewards, inpt)
+                if np.any(goal_made):
+                    NUM_GOALS += 1
 
-                r = 0.0
-                # print j
-                if j != 0:
-                    # If game has finished, calculate reward based on whether or not a goal was scored
-                    if terminal != IN_GAME:
-                        if int(terminal) == 1:
-                            NUM_GOALS += 1
-                            r += 5
-                    else:
-                        # Movement to ball
-                        r +=  (curr_ball_prox - old_ball_proxs[i])
-                        r += -3.0 * float(curr_goal_dist - old_goal_dists[i])
-                rr[i] += r
-                old_ball_proxs[i] = curr_ball_prox
-                old_goal_dists[i] = curr_goal_dist
-                old_kickables[i] = curr_kickable
-            rewards.append(r)
+            rr += action_rewards
+            old_ball_proxs = curr_ball_proxs
+            old_goal_dists = curr_goal_dists
+            old_kickables = curr_kickables
+
+            rewards.append(action_rewards)
             rewards = np.array(rewards)
             rewards = torch.FloatTensor(rewards).type(FloatTensor)
             states1 = np.stack(states1)
             states1 =torch.from_numpy(states1).float()
-            ################################################################
+
+            print states1.shape
+            assert False
+
+            # # action = add_noise
+            # states1 = []
+            # rewards = []
+            # for i in range(actions.size()[0]):
+            #     env = agent_envs[i]
+            #     a = actions[i]
+            #     index = np.argmax(a[:4])
+            #     if index == 0:
+            #         action  = (DASH, a[4], a[5])
+            #     elif index == 1:
+            #         action = (TURN, a[6])
+            #     elif index == 2:
+            #         action = (TACKLE, a[7])
+            #     else:
+            #         action = (KICK, a[8], a[9])
+            #     print "STEPPING"
+            #     env.act(*action)
+            #     terminal = env.step()
+            #     print "STEP FINISHED"
+            #     s1 = env.getState()
+            #     states1.append(s1)
+            #
+            #
+            #     curr_ball_prox = s1[53]
+            #     curr_kickable = s1[12]
+            #     goal_proximity = s1[15]
+            #     ball_dist = 1.0 - curr_ball_prox
+            #     goal_dist = 1.0 - goal_proximity
+            #     ball_ang_sin_rad = s1[51]
+            #     ball_ang_cos_rad = s1[52]
+            #     ball_ang_rad = np.arccos(ball_ang_cos_rad)
+            #     if ball_ang_sin_rad < 0:
+            #         ball_ang_rad *= -1.
+            #     goal_ang_sin_rad = s1[13]
+            #     goal_ang_cos_rad = s1[14]
+            #     goal_ang_rad = np.arccos(goal_ang_cos_rad)
+            #     if goal_ang_sin_rad < 0:
+            #         goal_ang_rad *= -1.
+            #     alpha = max(ball_ang_rad, goal_ang_rad) - min(ball_ang_rad, goal_ang_rad)
+            #     # Law of Cosines
+            #     curr_goal_dist = np.sqrt(ball_dist*ball_dist + goal_dist*goal_dist - 2.*ball_dist*goal_dist*np.cos(alpha))
+            #
+            #     r = 0.0
+            #     # print j
+            #     if j != 0:
+            #         # If game has finished, calculate reward based on whether or not a goal was scored
+            #         if terminal != IN_GAME:
+            #             if int(terminal) == 1:
+            #                 NUM_GOALS += 1
+            #                 r += 5
+            #         else:
+            #             # Movement to ball
+            #             r +=  (curr_ball_prox - old_ball_proxs[i])
+            #             r += -3.0 * float(curr_goal_dist - old_goal_dists[i])
+            #     rr[i] += r
+            #     old_ball_proxs[i] = curr_ball_prox
+            #     old_goal_dists[i] = curr_goal_dist
+            #     old_kickables[i] = curr_kickable
+            # rewards.append(r)
+            # rewards = np.array(rewards)
+            # rewards = torch.FloatTensor(rewards).type(FloatTensor)
+            # states1 = np.stack(states1)
+            # states1 =torch.from_numpy(states1).float()
+            # ################################################################
 
 
             if j == MAX_EP_STEPS - 1:
@@ -251,4 +309,3 @@ def run():
 
 if __name__ == '__main__':
     run()
-
