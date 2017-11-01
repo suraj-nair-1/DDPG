@@ -3,15 +3,17 @@ from hfo import *
 
 import numpy as np
 import tensorflow as tf
+import threading
 import torch
 from torch.autograd import Variable
 from multiprocessing import Pool
+import multiprocessing
 from MADDPG import MADDPG
 import numpy as np
 import torch as th
 import time
-LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
-
+# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+LOGPATH = "Users/surajnair/Documents/Tech/research/MADDPH_HFO"
 PRIORITIZED = True
 
 # Max training steps
@@ -40,23 +42,17 @@ GPUENABLED = False
 ORACLE = False
 PORT = 4500
 
-def connect(slp):
-    time.sleep(slp)
+FloatTensor = torch.cuda.FloatTensor if GPUENABLED else torch.FloatTensor
+
+def connect():
     hfo = HFOEnvironment()
     hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
                         'bin/teams/base/config/formations-dt', PORT,
                         'localhost', 'base_left', False)
-    print "FINISHED"
     return hfo
 
-def get_states(env):
-    print "GETTING STATE OG"
-    # time.sleep(np.)
-    s = env.getState()
-    return s
 
-def take_action_and_step(inpt):
-    a, env = inpt
+def take_action_and_step(a, env):
     index = np.argmax(a[:4])
     if index == 0:
         action  = (DASH, a[4], a[5])
@@ -66,10 +62,9 @@ def take_action_and_step(inpt):
         action = (TACKLE, a[7])
     else:
         action = (KICK, a[8], a[9])
-    print "STEPPING"
+
     env.act(*action)
     terminal = env.step()
-    print "STEP FINISHED"
     s1 = env.getState()
     return s1, terminal
 
@@ -114,48 +109,21 @@ def get_rewards(terminal, curr_ball_prox, curr_goal_dist, curr_kickable,
 
     return r, goal_made
 
-
-def run():
-    n_agents= int(sys.argv[1])
-    n_states = 77
-    n_actions = 10
-
-    # agent_envs = []
-    p = Pool(5)
-
-
-    agent_envs = p.map(connect, [0, 5])
-    # for k in range(n_agents):
-    #     print k, PORT
-    #     hfo = HFOEnvironment()
-    #     hfo.connectToServer(LOW_LEVEL_FEATURE_SET,
-    #                     'bin/teams/base/config/formations-dt', PORT,
-    #                     'localhost', 'base_left', False)
-    #     agent_envs.append(hfo)
-    #     print "DONE"
-
-    maddpg = MADDPG(n_agents, n_states, n_actions, batch_size, capacity,episodes_before_train)
-    FloatTensor = torch.cuda.FloatTensor if maddpg.use_cuda else torch.FloatTensor
+def run_process(maddpg, player_num):
+    env = connect()
 
     ITERATIONS = 0.0
     NUM_GOALS = 0.0
     np.random.seed(2)
-    print "STARTING EPISODES"
     for ep in xrange(MAX_EPISODES):
         ep_reward = 0.0
         ep_ave_max_q = 0.0
 
         status = IN_GAME
-        # Grab the state features from the environment
-        # s1 = np.concatenate((hfo.getState(), np.ones((8,))), axis =0)''
-        states1 = p.map(get_states, agent_envs)
-        # print "GOTEEM"
-        states1 = np.stack(states1)
-        print states1.shape
+        states1 = env.getState()
 
         old_reward = 0
         critic_loss = 0.0
-
         ep_good_q = 0.0
         ep_bad_q = 0.0
         ep_move_q = 0.0
@@ -165,29 +133,26 @@ def run():
         ep_updates = 0.0
 
 
-        rr = np.zeros((n_agents,))
-        old_ball_proxs = np.zeros((n_agents,))
-        old_goal_dists = np.zeros((n_agents,))
-        old_kickables = np.zeros((n_agents,))
+        rr = np.zeros((1,))
+        old_ball_proxs = np.zeros((1,))
+        old_goal_dists = np.zeros((1,))
+        old_kickables = np.zeros((1,))
         for j in xrange(MAX_EP_STEPS):
             # # Grab the state features from the environment
             states = states1
             states =  torch.from_numpy(states).float()
             states = Variable(states).type(FloatTensor)
 
-            actions = maddpg.select_action(states).data.cpu()
-            print actions.shape
+            actions = maddpg.select_action(states, player_num).data.cpu()
+            states1, terminals = take_action_and_step(actions, env)
 
-            inpt = zip(actions, agent_envs)
-            states1, terminals = p.map(take_action_and_step, inpt)
 
-            curr_ball_proxs, curr_goal_dists, curr_kickables = p.map(get_curr_state_vars, states1)
+            curr_ball_proxs, curr_goal_dists, curr_kickables = get_curr_state_vars(states1)
 
-            action_rewards = np.zeros((n_agents,))
+            action_rewards = np.zeros((1,))
             if j != 0:
-                inpt = zip(terminals, curr_ball_proxs, curr_goal_dists,
-                    curr_kickables, old_ball_proxs, old_goal_dists, old_kickables)
-                action_rewards, goal_made = p.map(get_rewards, inpt)
+                action_rewards, goal_made = get_rewards(terminals, curr_ball_proxs, curr_goal_dists, curr_kickables, old_ball_proxs, old_goal_dists, old_kickables)
+
                 if np.any(goal_made):
                     NUM_GOALS += 1
 
@@ -196,81 +161,18 @@ def run():
             old_goal_dists = curr_goal_dists
             old_kickables = curr_kickables
 
-            rewards.append(action_rewards)
-            rewards = np.array(rewards)
-            rewards = torch.FloatTensor(rewards).type(FloatTensor)
+            # rewards.append(action_rewards)
+            # rewards = np.array(rewards)
+            # rewards = torch.FloatTensor(rewards).type(FloatTensor)
             states1 = np.stack(states1)
             states1 =torch.from_numpy(states1).float()
 
             print states1.shape
-            assert False
-
-            # # action = add_noise
-            # states1 = []
-            # rewards = []
-            # for i in range(actions.size()[0]):
-            #     env = agent_envs[i]
-            #     a = actions[i]
-            #     index = np.argmax(a[:4])
-            #     if index == 0:
-            #         action  = (DASH, a[4], a[5])
-            #     elif index == 1:
-            #         action = (TURN, a[6])
-            #     elif index == 2:
-            #         action = (TACKLE, a[7])
-            #     else:
-            #         action = (KICK, a[8], a[9])
-            #     print "STEPPING"
-            #     env.act(*action)
-            #     terminal = env.step()
-            #     print "STEP FINISHED"
-            #     s1 = env.getState()
-            #     states1.append(s1)
-            #
-            #
-            #     curr_ball_prox = s1[53]
-            #     curr_kickable = s1[12]
-            #     goal_proximity = s1[15]
-            #     ball_dist = 1.0 - curr_ball_prox
-            #     goal_dist = 1.0 - goal_proximity
-            #     ball_ang_sin_rad = s1[51]
-            #     ball_ang_cos_rad = s1[52]
-            #     ball_ang_rad = np.arccos(ball_ang_cos_rad)
-            #     if ball_ang_sin_rad < 0:
-            #         ball_ang_rad *= -1.
-            #     goal_ang_sin_rad = s1[13]
-            #     goal_ang_cos_rad = s1[14]
-            #     goal_ang_rad = np.arccos(goal_ang_cos_rad)
-            #     if goal_ang_sin_rad < 0:
-            #         goal_ang_rad *= -1.
-            #     alpha = max(ball_ang_rad, goal_ang_rad) - min(ball_ang_rad, goal_ang_rad)
-            #     # Law of Cosines
-            #     curr_goal_dist = np.sqrt(ball_dist*ball_dist + goal_dist*goal_dist - 2.*ball_dist*goal_dist*np.cos(alpha))
-            #
-            #     r = 0.0
-            #     # print j
-            #     if j != 0:
-            #         # If game has finished, calculate reward based on whether or not a goal was scored
-            #         if terminal != IN_GAME:
-            #             if int(terminal) == 1:
-            #                 NUM_GOALS += 1
-            #                 r += 5
-            #         else:
-            #             # Movement to ball
-            #             r +=  (curr_ball_prox - old_ball_proxs[i])
-            #             r += -3.0 * float(curr_goal_dist - old_goal_dists[i])
-            #     rr[i] += r
-            #     old_ball_proxs[i] = curr_ball_prox
-            #     old_goal_dists[i] = curr_goal_dist
-            #     old_kickables[i] = curr_kickable
-            # rewards.append(r)
-            # rewards = np.array(rewards)
-            # rewards = torch.FloatTensor(rewards).type(FloatTensor)
-            # states1 = np.stack(states1)
-            # states1 =torch.from_numpy(states1).float()
-            # ################################################################
 
 
+            # TODO Anshul/Suraj: Start updating this so each process (agent) pushes to memory
+            # then after both are pushed they are aligned and saved like normal
+            # Will require changing the memory.py class
             if j == MAX_EP_STEPS - 1:
                 maddpg.memory.push(states.data, actions, None, rewards)
             else:
@@ -307,5 +209,44 @@ def run():
 
                 break
 
+
+
+def run():
+    n_agents= 2
+    n_states = 77
+    n_actions = 10
+
+
+
+    maddpg = MADDPG(n_agents, n_states, n_actions, batch_size, capacity,episodes_before_train)
+
+    p1 = multiprocessing.Process(target=run_process, args=(maddpg, 0))
+    p2 = multiprocessing.Process(target=run_process, args=(maddpg, 1))
+
+    print "Started"
+
+    p1.start()
+    time.sleep(5)
+    p2.start()
+
+
 if __name__ == '__main__':
     run()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
