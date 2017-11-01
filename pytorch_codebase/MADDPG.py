@@ -139,26 +139,7 @@ class MADDPG:
         print c_loss, a_loss
         return c_loss, a_loss
 
-    def select_action(self, state_batch):
-        # state_batch: n_agents x state_dim
-        actions = Variable(th.zeros(
-            self.n_agents,
-            self.n_actions))
-        FloatTensor = th.cuda.FloatTensor if self.use_cuda else th.FloatTensor
-        for i in range(self.n_agents):
-            sb = state_batch[i, :].detach()
-            act = self.actors[i](sb.unsqueeze(0)).squeeze()
-
-            act += Variable(
-                th.from_numpy(
-                    np.random.randn(2) * self.var[i]).type(FloatTensor))
-
-            if self.episode_done > self.episodes_before_train and\
-               self.var[i] > 0.05:
-                self.var[i] *= 0.999998
-            act = th.clamp(act, -1.0, 1.0)
-
-            actions[i, :] = act
+    def select_action(self, state_batch, i):
+        act = self.actors[i](state_batch.view(1, -1))
         self.steps_done += 1
-
-        return actions
+        return act[0]

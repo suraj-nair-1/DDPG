@@ -9,27 +9,15 @@ from params import scale_reward
 # do not render the scene
 e_render = False
 
-food_reward = 10.
-poison_reward = -1.
-encounter_reward = 0.01
-n_coop = 2
-world = MAWaterWorld_mod(n_pursuers=2, n_evaders=50,
-                         n_poison=50, obstacle_radius=0.04,
-                         food_reward=food_reward,
-                         poison_reward=poison_reward,
-                         encounter_reward=encounter_reward,
-                         n_coop=n_coop,
-                         sensor_range=0.2, obstacle_loc=None, )
 
-vis = visdom.Visdom(port=5274)
 reward_record = []
 
 np.random.seed(1234)
 th.manual_seed(1234)
 world.seed(1234)
-n_agents = world.n_pursuers
-n_states = 213
-n_actions = 2
+n_agents = 2
+n_states = 77
+n_actions = 10
 capacity = 1000000
 batch_size = 1000
 
