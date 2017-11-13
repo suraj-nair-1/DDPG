@@ -98,6 +98,7 @@ def get_rewards(terminal, curr_ball_prox, curr_goal_dist, curr_kickable,
     r = 0.0
 
     # If game has finished, calculate reward based on whether or not a goal was scored
+    goal_made = False
     if terminal != IN_GAME:
         if int(terminal) == 1:
             goal_made = True
@@ -109,7 +110,7 @@ def get_rewards(terminal, curr_ball_prox, curr_goal_dist, curr_kickable,
 
     return r, goal_made
 
-def run_process(maddpg, player_num):
+def run_process(maddpg, player_num, player_queue):
     env = connect()
 
     ITERATIONS = 0.0
@@ -140,18 +141,23 @@ def run_process(maddpg, player_num):
         for j in xrange(MAX_EP_STEPS):
             # # Grab the state features from the environment
             states = states1
-            states =  torch.from_numpy(states).float()
+            try:
+                states =  torch.from_numpy(states).float()
+            except:
+                states = states.float()
             states = Variable(states).type(FloatTensor)
 
             actions = maddpg.select_action(states, player_num).data.cpu()
-            states1, terminals = take_action_and_step(actions, env)
+            states1, terminal = take_action_and_step(actions, env)
 
 
             curr_ball_proxs, curr_goal_dists, curr_kickables = get_curr_state_vars(states1)
 
             action_rewards = np.zeros((1,))
             if j != 0:
-                action_rewards, goal_made = get_rewards(terminals, curr_ball_proxs, curr_goal_dists, curr_kickables, old_ball_proxs, old_goal_dists, old_kickables)
+                # print curr_ball_proxs,curr_goal_dists
+                action_rewards, goal_made = get_rewards(terminal, curr_ball_proxs, curr_goal_dists, curr_kickables, old_ball_proxs, old_goal_dists, old_kickables)
+
 
                 if np.any(goal_made):
                     NUM_GOALS += 1
@@ -161,24 +167,18 @@ def run_process(maddpg, player_num):
             old_goal_dists = curr_goal_dists
             old_kickables = curr_kickables
 
-            # rewards.append(action_rewards)
-            # rewards = np.array(rewards)
-            # rewards = torch.FloatTensor(rewards).type(FloatTensor)
             states1 = np.stack(states1)
             states1 =torch.from_numpy(states1).float()
-
-            print states1.shape
 
 
             # TODO Anshul/Suraj: Start updating this so each process (agent) pushes to memory
             # then after both are pushed they are aligned and saved like normal
             # Will require changing the memory.py class
             if j == MAX_EP_STEPS - 1:
-                maddpg.memory.push(states.data, actions, None, rewards)
+                player_queue.put((states.data, actions, None, rr))
             else:
-                maddpg.memory.push(states.data, actions, states1, rewards)
+                player_queue.put((states.data, actions, states1, rr))
             states = states1
-            c_loss, a_loss = maddpg.update_policy()
 
 
             # EPISODE IS OVER
@@ -216,18 +216,35 @@ def run():
     n_states = 77
     n_actions = 10
 
-
+    q1 = multiprocessing.Queue()
+    q2 = multiprocessing.Queue()
 
     maddpg = MADDPG(n_agents, n_states, n_actions, batch_size, capacity,episodes_before_train)
 
-    p1 = multiprocessing.Process(target=run_process, args=(maddpg, 0))
-    p2 = multiprocessing.Process(target=run_process, args=(maddpg, 1))
+    p1 = multiprocessing.Process(target=run_process, args=(maddpg, 0, q1))
+    p2 = multiprocessing.Process(target=run_process, args=(maddpg, 1, q2))
 
     print "Started"
 
     p1.start()
     time.sleep(5)
     p2.start()
+
+    while True:
+        p1_sts, p1_acts, p1_sts1, p1_rws = q1.get()
+        p2_sts, p2_acts, p2_sts1, p2_rws = q2.get()
+
+        sts = torch.stack([p1_sts, p2_sts])
+        acts = torch.stack([p1_acts, p2_acts])
+        if (p2_sts1 is None) or (p1_sts1 is None):
+            sts1 = None
+        else:
+            sts1 = torch.stack([p1_sts1, p2_sts1])
+        rws = np.stack([p1_rws, p2_rws])
+        rws = torch.FloatTensor(rws)
+
+        maddpg.memory.push(sts, acts, sts1, rws)
+        c_loss, a_loss = maddpg.update_policy()
 
 
 if __name__ == '__main__':
