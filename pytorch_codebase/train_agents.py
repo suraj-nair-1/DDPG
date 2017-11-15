@@ -29,6 +29,8 @@ GAMMA = 0.99
 # Soft target update param
 TAU = 0.001
 
+EPS_ITERATIONS_ANNEAL = 100000
+
 # Noise for exploration
 EPS_GREEDY_INIT = 1.0
 # EPS_ITERATIONS_ANNEAL = 1000000
@@ -36,7 +38,7 @@ EPS_GREEDY_INIT = 1.0
 # Size of replay buffer
 capacity = 1000000
 batch_size = 1024
-episodes_before_train = 1
+steps_before_train = 2000
 
 GPUENABLED = False
 ORACLE = False
@@ -52,7 +54,17 @@ def connect():
     return hfo
 
 
-def take_action_and_step(a, env):
+def take_action_and_step(a, env, eps):
+    if (np.random.random_sample() <= eps):
+        acts = np.random.uniform(1, 10, 4)
+        a[:4] = acts / np.sum(acts)
+        a[4] = np.random.uniform(0, 100)
+        a[5] = np.random.uniform(-180, 180)
+        a[6] = np.random.uniform(-180, 180)
+        a[7] = np.random.uniform(-180, 180)
+        a[8] = np.random.uniform(0, 100)
+        a[9] = np.random.uniform(-180, 180)
+
     index = np.argmax(a[:4])
     if index == 0:
         action  = (DASH, a[4], a[5])
@@ -113,9 +125,13 @@ def get_rewards(terminal, curr_ball_prox, curr_goal_dist, curr_kickable,
 def run_process(maddpg, player_num, player_queue):
     env = connect()
 
+    if player_num == 0:
+        np.random.seed(12)
+    else:
+        np.random.seed(111)
+
     ITERATIONS = 0.0
     NUM_GOALS = 0.0
-    np.random.seed(2)
     for ep in xrange(MAX_EPISODES):
         ep_reward = 0.0
         ep_ave_max_q = 0.0
@@ -134,6 +150,7 @@ def run_process(maddpg, player_num, player_queue):
         ep_updates = 0.0
 
 
+
         rr = np.zeros((1,))
         old_ball_proxs = np.zeros((1,))
         old_goal_dists = np.zeros((1,))
@@ -148,7 +165,7 @@ def run_process(maddpg, player_num, player_queue):
             states = Variable(states).type(FloatTensor)
 
             actions = maddpg.select_action(states, player_num).data.cpu()
-            states1, terminal = take_action_and_step(actions, env)
+            states1, terminal = take_action_and_step(actions.numpy(), env, max(0.1, 1 - ITERATIONS / EPS_ITERATIONS_ANNEAL))
 
 
             curr_ball_proxs, curr_goal_dists, curr_kickables = get_curr_state_vars(states1)
@@ -180,6 +197,7 @@ def run_process(maddpg, player_num, player_queue):
                 player_queue.put((states.data, actions, states1, rr))
             states = states1
 
+            ITERATIONS += 1
 
             # EPISODE IS OVER
             ###########################################################
@@ -219,7 +237,7 @@ def run():
     q1 = multiprocessing.Queue()
     q2 = multiprocessing.Queue()
 
-    maddpg = MADDPG(n_agents, n_states, n_actions, batch_size, capacity,episodes_before_train)
+    maddpg = MADDPG(n_agents, n_states, n_actions, batch_size, capacity,steps_before_train)
 
     p1 = multiprocessing.Process(target=run_process, args=(maddpg, 0, q1))
     p2 = multiprocessing.Process(target=run_process, args=(maddpg, 1, q2))
@@ -245,6 +263,7 @@ def run():
 
         maddpg.memory.push(sts, acts, sts1, rws)
         c_loss, a_loss = maddpg.update_policy()
+        maddpg.episode_done += 1
 
 
 if __name__ == '__main__':

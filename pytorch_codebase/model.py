@@ -51,10 +51,10 @@ class Actor(nn.Module):
         result = self.FC5(result)
         r1 = result[:, :4]
         r2 = result[:, 4:]
-
+        
         r1 = F.softmax(r1)
-
         r2 = F.sigmoid(r2)
+
         r2 = (r2 * (self.high_action_bound - self.low_action_bound)) + self.low_action_bound
         out = th.cat((r1, r2), 1)
 
