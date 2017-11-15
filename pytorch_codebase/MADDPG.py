@@ -64,7 +64,7 @@ class MADDPG:
 
     def update_policy(self):
         # do not train until exploration is enough
-        print 'update'
+        # print 'update'
         if self.episode_done <= self.episodes_before_train:
             return None, None
 
@@ -113,7 +113,7 @@ class MADDPG:
 
             # scale_reward: to scale reward in Q functions
             target_Q = (target_Q * self.GAMMA) + (
-                reward_batch[:, agent] * scale_reward)
+                reward_batch[:, agent] * scale_reward).view(-1)
 
             loss_Q = nn.MSELoss()(current_Q, target_Q.detach())
             loss_Q.backward()
@@ -122,12 +122,30 @@ class MADDPG:
             self.actor_optimizer[agent].zero_grad()
             state_i = state_batch[:, agent, :]
             action_i = self.actors[agent](state_i)
+            action_i.retain_grad()
             ac = action_batch.clone()
             ac[:, agent, :] = action_i
             whole_action = ac.view(self.batch_size, -1)
             actor_loss = -self.critics[agent](whole_state, whole_action)
             actor_loss = actor_loss.mean()
             actor_loss.backward()
+
+
+            params = action_i[:, 4:]
+            high = self.actors[agent].high_action_bound
+            high = high.repeat(action_i.size()[0], 1)
+            low = self.actors[agent].low_action_bound
+            low = low.repeat(action_i.size()[0], 1)
+
+            pmax = ((high - params) / (high - low))
+            pmin = ((params - low) / (high - low))
+
+            grad = action_i.grad[:, 4:]
+            g1 = (grad < 0).float() * pmin
+            g2 = (grad >= 0).float() * pmax
+
+            action_i.grad = th.cat([action_i.grad[:, :4], (g1+g2)], 1)
+
             self.actor_optimizer[agent].step()
             c_loss.append(loss_Q)
             a_loss.append(actor_loss)
@@ -136,7 +154,7 @@ class MADDPG:
             for i in range(self.n_agents):
                 soft_update(self.critics_target[i], self.critics[i], self.tau)
                 soft_update(self.actors_target[i], self.actors[i], self.tau)
-        print c_loss, a_loss
+        # print c_loss, a_loss
         return c_loss, a_loss
 
     def select_action(self, state_batch, i):

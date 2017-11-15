@@ -1,12 +1,12 @@
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 class RandomProcess:
     def reset_states(self):
         pass
 
 
-class AnnealedGaussianProcess(RandomProcess):
+class AnnealedGaussianProcess(object):
     def __init__(self, mu, sigma, sigma_min, n_steps_annealing):
         self.mu = mu
         self.sigma = sigma
@@ -56,3 +56,15 @@ class OrnsteinUhlenbeckProcess(AnnealedGaussianProcess):
 
     def reset_states(self):
         self.x_prev = self.x0 if self.x0 is not None else np.zeros(self.size)
+
+
+if __name__=="__main__":
+    o = OrnsteinUhlenbeckProcess(theta=1.0)
+    o.reset_states()
+    r = []
+    for i in range(10000000):
+      s = o.sample()
+      r.append(float(s[0]))
+    plt.plot(r)
+    plt.savefig("test_OU")
+    plt.close()
