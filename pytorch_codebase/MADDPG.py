@@ -161,3 +161,6 @@ class MADDPG:
         act = self.actors[i](state_batch.view(1, -1))
         self.steps_done += 1
         return act[0]
+
+    def critic_predict(self, state_batch, action_batch, i):
+        return self.critics[i].forward(state_batch, action_batch)

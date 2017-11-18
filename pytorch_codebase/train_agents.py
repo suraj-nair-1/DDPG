@@ -12,6 +12,8 @@ from MADDPG import MADDPG
 import numpy as np
 import torch as th
 import time
+import h5py
+
 # LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 LOGPATH = "Users/surajnair/Documents/Tech/research/MADDPH_HFO"
 PRIORITIZED = True
@@ -187,14 +189,35 @@ def run_process(maddpg, player_num, player_queue):
             states1 = np.stack(states1)
             states1 =torch.from_numpy(states1).float()
 
+            s_batch, a_batch, s1_batch, r_batch = maddpg.memory.sample_player(player_num, batch_size)
+            move_batch = []
+            turn_batch = []
+            tackle_batch = []
+            kick_batch = []
+            for elem in s_batch:
+                move_batch.append([1, 0, 0, 0,np.random.uniform(0, 100) , np.random.uniform(-180, 180), 0, 0, 0, 0])
+                turn_batch.append([0, 1, 0, 0, 0, 0, np.random.uniform(-180, 180), 0, 0, 0])
+                tackle_batch.append([0, 0, 1, 0, 0, 0, 0, np.random.uniform(-180, 180), 0, 0])
+                kick_batch.append([0, 0, 0, 1, 0, 0, 0, 0, np.random.uniform(0, 100) , np.random.uniform(-180, 180)])
+            target_move = maddpg.critic_predict(s_batch, np.array(move_batch), player_num)
+            target_turn = maddpg.critic_predict(s_batch, np.array(turn_batch))
+            target_tackle = maddpg.critic_predict(s_batch, np.array(tackle_batch))
+            target_kick = maddpg.critic_predict(s_batch, np.array(kick_batch))
+
+            ep_move_q += np.mean(target_move)
+            ep_turn_q += np.mean(target_turn)
+            ep_tackle_q += np.mean(target_tackle)
+            ep_kick_q += np.mean(target_kick)
+
+            player_stats = [ep_move_q, ep_turn_q, ep_tackle_q, ep_kick_q]
 
             # TODO Anshul/Suraj: Start updating this so each process (agent) pushes to memory
             # then after both are pushed they are aligned and saved like normal
             # Will require changing the memory.py class
             if j == MAX_EP_STEPS - 1:
-                player_queue.put((states.data, actions, None, rr))
+                player_queue.put((states.data, actions, None, rr, player_stats))
             else:
-                player_queue.put((states.data, actions, states1, rr))
+                player_queue.put((states.data, actions, states1, rr, player_stats))
             states = states1
 
             ITERATIONS += 1
@@ -234,6 +257,13 @@ def run():
     n_states = 77
     n_actions = 10
 
+    f = h5py.File(LOGPATH + 'logging/logs' + str(LOGNUM) + '.txt', "w")
+    stats_grp = f.create_group("statistics")
+    dset_move = stats_grp.create_dataset("ep_move_q", (n_agents, MAX_EPISODES), dtype='f')
+    dset_turn = stats_grp.create_dataset("ep_turn_q", (n_agents, MAX_EPISODES), dtype='f')
+    dset_tackle = stats_grp.create_dataset("ep_tackle_q", (n_agents, MAX_EPISODES), dtype='f')
+    dset_kick = stats_grp.create_dataset("ep_kick_q", (n_agents, MAX_EPISODES), dtype='f')
+
     q1 = multiprocessing.Queue()
     q2 = multiprocessing.Queue()
 
@@ -249,8 +279,8 @@ def run():
     p2.start()
 
     while True:
-        p1_sts, p1_acts, p1_sts1, p1_rws = q1.get()
-        p2_sts, p2_acts, p2_sts1, p2_rws = q2.get()
+        p1_sts, p1_acts, p1_sts1, p1_rws, p1_logstats = q1.get()
+        p2_sts, p2_acts, p2_sts1, p2_rws, p2_logstats = q2.get()
 
         sts = torch.stack([p1_sts, p2_sts])
         acts = torch.stack([p1_acts, p2_acts])
@@ -261,6 +291,12 @@ def run():
         rws = np.stack([p1_rws, p2_rws])
         rws = torch.FloatTensor(rws)
 
+        all_logstats = np.stack([p1_logstats, p2_logstats])
+        dset_move[:, maddpg.episode_done] = all_logstats[:, 0]
+        dset_turn[:, maddpg.episode_done] = all_logstats[:, 1]
+        dset_tackle[:, maddpg.episode_done] = all_logstats[:, 2]
+        dset_kick[:, maddpg.episode_done] = all_logstats[:, 3]
+
         maddpg.memory.push(sts, acts, sts1, rws)
         c_loss, a_loss = maddpg.update_policy()
         maddpg.episode_done += 1
@@ -268,21 +304,3 @@ def run():
 
 if __name__ == '__main__':
     run()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
