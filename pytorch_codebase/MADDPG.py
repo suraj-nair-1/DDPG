@@ -150,17 +150,17 @@ class MADDPG:
             c_loss.append(loss_Q)
             a_loss.append(actor_loss)
 
-        if self.steps_done % 100 == 0 and self.steps_done > 0:
-            for i in range(self.n_agents):
-                soft_update(self.critics_target[i], self.critics[i], self.tau)
-                soft_update(self.actors_target[i], self.actors[i], self.tau)
+        # if self.steps_done % 100 == 0 and self.steps_done > 0:
+        for i in range(self.n_agents):
+            soft_update(self.critics_target[i], self.critics[i], self.tau)
+            soft_update(self.actors_target[i], self.actors[i], self.tau)
         # print c_loss, a_loss
         return c_loss, a_loss
 
     def select_action(self, state_batch, i):
         act = self.actors[i](state_batch.view(1, -1))
-        self.steps_done += 1
+        # self.steps_done += 1
         return act[0]
 
     def critic_predict(self, state_batch, action_batch, i):
-        return self.critics[i].forward(state_batch, action_batch)
+        return self.critics[i](state_batch, action_batch)

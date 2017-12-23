@@ -19,12 +19,5 @@ class ReplayMemory:
     def sample(self, batch_size):
         return random.sample(self.memory, batch_size)
 
-    def sample_player(self, player_num, batch_size):
-        samples = random.sample(self.memory, batch_size)
-        player_sample = []
-        for samples in samples:
-            player_samples.append(sample[self.player_num])
-        return player_samples
-
     def __len__(self):
         return len(self.memory)
