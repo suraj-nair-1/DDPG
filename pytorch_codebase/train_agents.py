@@ -127,7 +127,7 @@ def get_rewards(terminal, curr_ball_prox, curr_goal_dist, curr_kickable,
 
     return [r], goal_made
 
-def run_process(maddpg, player_num, player_queue, root_queue):
+def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
     env = connect()
 
     if player_num == 0:
@@ -208,11 +208,14 @@ def run_process(maddpg, player_num, player_queue, root_queue):
                 print terminal
                 print('| Reward: ' , rr, " | Episode", ep)
                 break
+            
+            try:
+                maddpg = root_queue.get(block=False)
+            except:
+                pass
 
-            new = root_queue.get()
-            if new != 0:
-                maddpg=new
-
+            new = feedback_queue.get()
+            assert(new == 0)
 
 def extra_stats(maddpg, player_num):
     transitions = maddpg.memory.sample(batch_size)
@@ -279,11 +282,13 @@ def run():
     q2 = multiprocessing.Queue()
     r1 = multiprocessing.Queue()
     r2 = multiprocessing.Queue()
+    fdbk1 = multiprocessing.Queue()
+    fdbk2 = multiprocessing.Queue()
 
     maddpg = MADDPG(n_agents, n_states, n_actions, batch_size, capacity, eps_before_train)
 
-    p1 = multiprocessing.Process(target=run_process, args=(maddpg, 0, q1, r1))
-    p2 = multiprocessing.Process(target=run_process, args=(maddpg, 1, q2, r2))
+    p1 = multiprocessing.Process(target=run_process, args=(maddpg, 0, q1, r1, fdbk1))
+    p2 = multiprocessing.Process(target=run_process, args=(maddpg, 1, q2, r2, fdbk2))
 
     print "Started"
 
@@ -346,9 +351,9 @@ def run():
             copy_maddpg.memory.position = 0
             r1.put(copy_maddpg)
             r2.put(copy_maddpg)
-        else:
-            r1.put(0)
-            r2.put(0)
+        
+        fdbk1.put(0)
+        fdbk2.put(0)
 
         # training step every 10 steps
         if itr % 10 == 0:
