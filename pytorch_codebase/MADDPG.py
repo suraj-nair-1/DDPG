@@ -151,10 +151,10 @@ class MADDPG:
             c_loss.append(loss_Q)
             a_loss.append(actor_loss)
 
-        # if self.steps_done % 100 == 0 and self.steps_done > 0:
-        for i in range(self.n_agents):
-            soft_update(self.critics_target[i], self.critics[i], self.tau)
-            soft_update(self.actors_target[i], self.actors[i], self.tau)
+        if self.steps_done % 100 == 0 and self.steps_done > 0:
+            for i in range(self.n_agents):
+                soft_update(self.critics_target[i], self.critics[i], self.tau)
+                soft_update(self.actors_target[i], self.actors[i], self.tau)
         # print c_loss, a_loss
         return c_loss, a_loss
 
