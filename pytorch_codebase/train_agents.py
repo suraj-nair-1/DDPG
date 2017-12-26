@@ -18,6 +18,8 @@ import copy
 
 LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 #LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
+#LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
+
 LOGNUM = 1
 PRIORITIZED = True
 
@@ -208,7 +210,7 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
                 print terminal
                 print('| Reward: ' , rr, " | Episode", ep)
                 break
-            
+
             try:
                 maddpg = root_queue.get(block=False)
             except:
@@ -278,6 +280,7 @@ def run():
     dset_rewards = stats_grp.create_dataset("ep_reward", (n_agents, MAX_EPISODES), dtype='f')
     dset_closs = stats_grp.create_dataset("ep_closs", (n_agents, MAX_EPISODES), dtype='f')
     dset_aloss = stats_grp.create_dataset("ep_aloss", (n_agents, MAX_EPISODES), dtype='f')
+    dset_numdone = stats_grp.create_dataset("ep_numdone", data=np.array([-1]))
     f.swmr_mode = True # NECESSARY FOR SIMULTANEOUS READ/WRITE
 
     q1 = multiprocessing.Queue()
@@ -344,16 +347,19 @@ def run():
                 dset_closs.flush()
                 dset_aloss.flush()
 
+            dset_numdone[0] = maddpg.episode_done
+            dset_numdone.flush()
+
             # Create lightweight version of MADDPG and send back to processes
             ### TODO: ANSHUL. See if there is a better way to do this. Because
             ### each process has its own GIL, we need some way of updating the
-            ### policies in the agent processes. 
+            ### policies in the agent processes.
             copy_maddpg = copy.deepcopy(maddpg)
             copy_maddpg.memory.memory = []
             copy_maddpg.memory.position = 0
             r1.put(copy_maddpg)
             r2.put(copy_maddpg)
-        
+
         fdbk1.put(0)
         fdbk2.put(0)
 
@@ -367,4 +373,3 @@ def run():
 
 if __name__ == '__main__':
     run()
-
