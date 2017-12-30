@@ -8,6 +8,7 @@ class ReplayMemory:
     def __init__(self, capacity):
         self.capacity = capacity
         self.memory = []
+        self.sorted_memory = []
         self.position = 0
 
     def push(self, *args):
@@ -16,7 +17,15 @@ class ReplayMemory:
         self.memory[self.position] = Experience(*args)
         self.position = (self.position + 1) % self.capacity
 
-    def sample(self, batch_size):
+        if self.position % 10000 == 0:
+            self.memory = sorted(self.memory, key=lambda row: np.mean(row.rewards))
+
+    def sample(self, batch_size, prioritized = False):
+        if prioritized:
+            batch1 = random.sample(self.memory[:(self.capacity / 10)], batch_size / 4)
+            batch2 = random.sample(self.memory[-(self.capacity / 10):], batch_size / 4)
+            batch3 = random.sample(self.memory, batch_size / 2)
+            return batch3 + batch2 + batch1
         return random.sample(self.memory, batch_size)
 
     def __len__(self):

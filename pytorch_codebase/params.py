@@ -1,1 +1,1 @@
-scale_reward = 0.01
+scale_reward = 1
