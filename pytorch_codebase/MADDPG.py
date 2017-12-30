@@ -63,7 +63,7 @@ class MADDPG:
         self.steps_done = 0
         self.episode_done = 0
 
-    def update_policy(self):
+    def update_policy(self, prioritized=False):
         # do not train until exploration is enough
         # print 'update'
         if self.episode_done <= self.episodes_before_train:
@@ -75,7 +75,7 @@ class MADDPG:
         c_loss = []
         a_loss = []
         for agent in range(self.n_agents):
-            transitions = self.memory.sample(self.batch_size)
+            transitions = self.memory.sample(self.batch_size, prioritized=prioritized)
             batch = Experience(*zip(*transitions))
             non_final_mask = ByteTensor(list(map(lambda s: s is not None,
                                                  batch.next_states)))

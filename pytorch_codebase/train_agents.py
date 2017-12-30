@@ -195,10 +195,12 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
             states1 = np.stack(states1)
             states1 =torch.from_numpy(states1).float()
 
-            if j == MAX_EP_STEPS - 1:
-                player_queue.put((states.data, actions, None, action_rewards, terminal, rr, ep))
-            else:
-                player_queue.put((states.data, actions, states1, action_rewards, terminal, rr, ep))
+            # if j == MAX_EP_STEPS - 1:
+            #     player_queue.put((states.data, actions, None, action_rewards, terminal, rr, ep))
+            # else:
+            #     player_queue.put((states.data, actions, states1, action_rewards, terminal, rr, ep))
+
+            player_queue.put((states.data, actions, states1, action_rewards, terminal, rr, (ep, j)))
             states = states1
             print "PLAYER", player_num, maddpg.episode_done
 
@@ -307,6 +309,13 @@ def run():
         # State_t, Action, State_t+1, transition reward, terminal, episodre reward, episode #
         p1_sts, p1_acts, p1_sts1, p1_rws, terminal1, episode_rew1, ep1 = q1.get()
         p2_sts, p2_acts, p2_sts1, p2_rws, terminal2 , episode_rew2, ep2= q2.get()
+        ep1, step1 = ep1
+        ep2, step2 = ep2
+
+
+        assert((ep1=ep2) && (step1==step2))
+
+
         maddpg.episode_done = ep1
         print "MAIN LOOP", maddpg.episode_done
         sts = torch.stack([p1_sts, p2_sts])
@@ -365,7 +374,7 @@ def run():
 
         # training step every 10 steps
         if itr % 10 == 0:
-            c_loss, a_loss = maddpg.update_policy()
+            c_loss, a_loss = maddpg.update_policy(prioritized = (ep1 > 20))
             print "LOSS", c_loss, a_loss
 
 
