@@ -15,6 +15,7 @@ import torch as th
 import time
 import h5py
 import copy
+import traceback
 
 LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 #LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
@@ -49,7 +50,7 @@ eps_before_train = 5
 
 GPUENABLED = False
 ORACLE = False
-PORT = 4500
+PORT = int(sys.argv[1])
 
 FloatTensor = torch.cuda.FloatTensor if GPUENABLED else torch.FloatTensor
 
@@ -171,7 +172,7 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
                 states = states.float()
             states = Variable(states).type(FloatTensor)
 
-            actions = maddpg.select_action(states, player_num).data.cpu()
+            actions = maddpg.select_action(states, player_num).data
             states1, terminal = take_action_and_step(actions.numpy(), env, max(0.1, 1 - ITERATIONS / EPS_ITERATIONS_ANNEAL))
 
 
@@ -219,7 +220,7 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
                 pass
 
             try:
-                new = feedback_queue.get(timeout=2)
+                new = feedback_queue.get()
             except:
                 print "TIMEOUT"
 
@@ -412,6 +413,7 @@ def run():
     except Exception, e:
         r1.put(None)
         r2.put(None)
+        traceback.print_exc()
         raise e
 
 
