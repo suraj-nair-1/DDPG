@@ -327,88 +327,93 @@ def run():
 
     itr = 1
 
-    while True:
-        # State_t, Action, State_t+1, transition reward, terminal, episodre reward, episode #
-        p1_sts, p1_acts, p1_sts1, p1_rws, terminal1, episode_rew1, ep1 = q1.get()
-        p2_sts, p2_acts, p2_sts1, p2_rws, terminal2 , episode_rew2, ep2 = q2.get()
+    try:
 
-        ep1, step1 = ep1
-        ep2, step2 = ep2
+        while True:
+            # State_t, Action, State_t+1, transition reward, terminal, episodre reward, episode #
+            p1_sts, p1_acts, p1_sts1, p1_rws, terminal1, episode_rew1, ep1 = q1.get()
+            p2_sts, p2_acts, p2_sts1, p2_rws, terminal2 , episode_rew2, ep2 = q2.get()
+
+            ep1, step1 = ep1
+            ep2, step2 = ep2
 
 
-        assert((ep1==ep2) and (step1==step2))
+            assert((ep1==ep2) and (step1==step2))
 
 
-        maddpg.episode_done = ep1
-        print "MAIN LOOP", maddpg.episode_done
-        sts = torch.stack([p1_sts, p2_sts])
-        acts = torch.stack([p1_acts, p2_acts])
-        if (p2_sts1 is None) or (p1_sts1 is None):
-            sts1 = None
-        else:
+            maddpg.episode_done = ep1
+            print "MAIN LOOP", maddpg.episode_done
+            sts = torch.stack([p1_sts, p2_sts])
+            acts = torch.stack([p1_acts, p2_acts])
             sts1 = torch.stack([p1_sts1, p2_sts1])
-        rws = np.stack([p1_rws, p2_rws])
-        rws = torch.FloatTensor(rws)
-        maddpg.memory.push(sts, acts, sts1, rws)
 
-        # At The End of each episode log stats and update target
-        if (terminal1 != 0):
-            # Logging Stats
-            if len(maddpg.memory.memory) > batch_size:
-                p1_logstats = extra_stats(maddpg, 0)
-                p2_logstats = extra_stats(maddpg, 1)
-                all_logstats = np.stack([p1_logstats, p2_logstats])
+            rws = np.stack([p1_rws, p2_rws])
+            rws = torch.FloatTensor(rws)
+            maddpg.memory.push(sts, acts, sts1, rws)
 
-                dset_move[:, maddpg.episode_done] = all_logstats[:, 0]
-                dset_turn[:, maddpg.episode_done] = all_logstats[:, 1]
-                dset_tackle[:, maddpg.episode_done] = all_logstats[:, 2]
-                dset_kick[:, maddpg.episode_done] = all_logstats[:, 3]
-                dset_good[:, maddpg.episode_done] = all_logstats[:, 4]
-                dset_bad[:, maddpg.episode_done] = all_logstats[:, 5]
+            # At The End of each episode log stats and update target
+            if (terminal1 != 0):
+                # Logging Stats
+                if len(maddpg.memory.memory) > batch_size:
+                    p1_logstats = extra_stats(maddpg, 0)
+                    p2_logstats = extra_stats(maddpg, 1)
+                    all_logstats = np.stack([p1_logstats, p2_logstats])
 
-                dset_move.flush()
-                dset_turn.flush()
-                dset_tackle.flush()
-                dset_kick.flush()
-                dset_good.flush()
-                dset_bad.flush()
+                    dset_move[:, maddpg.episode_done] = all_logstats[:, 0]
+                    dset_turn[:, maddpg.episode_done] = all_logstats[:, 1]
+                    dset_tackle[:, maddpg.episode_done] = all_logstats[:, 2]
+                    dset_kick[:, maddpg.episode_done] = all_logstats[:, 3]
+                    dset_good[:, maddpg.episode_done] = all_logstats[:, 4]
+                    dset_bad[:, maddpg.episode_done] = all_logstats[:, 5]
 
-            dset_rewards[:, maddpg.episode_done] = np.array([episode_rew1, episode_rew2]).reshape((1,2))
-            dset_rewards.flush()
-            if c_loss is not None:
-                for i in range(len(c_loss)):
-                    c_loss[i] = c_loss[i].data.numpy()
-                for i in range(len(a_loss)):
-                    a_loss[i] = a_loss[i].data.numpy()
-                dset_closs[:, maddpg.episode_done] = np.array(c_loss).reshape((1,2))
-                dset_aloss[:, maddpg.episode_done] = np.array(a_loss).reshape((1,2))
-                dset_closs.flush()
-                dset_aloss.flush()
+                    dset_move.flush()
+                    dset_turn.flush()
+                    dset_tackle.flush()
+                    dset_kick.flush()
+                    dset_good.flush()
+                    dset_bad.flush()
 
-            dset_numdone[0] = maddpg.episode_done
-            dset_numdone.flush()
+                dset_rewards[:, maddpg.episode_done] = np.array([episode_rew1, episode_rew2]).reshape((1,2))
+                dset_rewards.flush()
+                if c_loss is not None:
+                    for i in range(len(c_loss)):
+                        c_loss[i] = c_loss[i].data.numpy()
+                    for i in range(len(a_loss)):
+                        a_loss[i] = a_loss[i].data.numpy()
+                    dset_closs[:, maddpg.episode_done] = np.array(c_loss).reshape((1,2))
+                    dset_aloss[:, maddpg.episode_done] = np.array(a_loss).reshape((1,2))
+                    dset_closs.flush()
+                    dset_aloss.flush()
 
-            # Create lightweight version of MADDPG and send back to processes
-            ### TODO: ANSHUL. See if there is a better way to do this. Because
-            ### each process has its own GIL, we need some way of updating the
-            ### policies in the agent processes.
-            copy_maddpg = copy.deepcopy(maddpg)
-            copy_maddpg.memory.memory = []
-            copy_maddpg.memory.position = 0
-            r1.put(copy_maddpg)
-            r2.put(copy_maddpg)
+                dset_numdone[0] = maddpg.episode_done
+                dset_numdone.flush()
 
-        fdbk1.put(0)
-        fdbk2.put(0)
+                # Create lightweight version of MADDPG and send back to processes
+                ### TODO: ANSHUL. See if there is a better way to do this. Because
+                ### each process has its own GIL, we need some way of updating the
+                ### policies in the agent processes.
+                copy_maddpg = copy.deepcopy(maddpg)
+                copy_maddpg.memory.memory = []
+                copy_maddpg.memory.position = 0
+                r1.put(copy_maddpg)
+                r2.put(copy_maddpg)
 
-        # training step every 10 steps
-        if itr % 10 == 0:
-            c_loss, a_loss = maddpg.update_policy(prioritized = True)
-            print "LOSS", c_loss, a_loss
+            fdbk1.put(0)
+            fdbk2.put(0)
+
+            # training step every 10 steps
+            if itr % 10 == 0:
+                c_loss, a_loss = maddpg.update_policy(prioritized = True)
+                print "LOSS", c_loss, a_loss
 
 
-        maddpg.steps_done += 1
-        itr += 1
+            maddpg.steps_done += 1
+            itr += 1
+    except Exception, e:
+        r1.put(None)
+        r2.put(None)
+        raise e
+
 
 if __name__ == '__main__':
     run()
