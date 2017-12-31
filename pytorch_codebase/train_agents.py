@@ -234,6 +234,10 @@ def extra_stats(maddpg, player_num):
     turn_batch = action_batch.clone()
     tackle_batch = action_batch.clone()
     kick_batch = action_batch.clone()
+
+    good_batch = action_batch.clone()
+    bad_batch = action_batch.clone()
+
     for ind, elem in enumerate(s_batch):
         move_batch[ind, player_num] = Variable(torch.FloatTensor(
             np.array([1, 0, 0, 0,np.random.uniform(0, 100) , np.random.uniform(-180, 180), 0, 0, 0, 0])))
@@ -247,24 +251,40 @@ def extra_stats(maddpg, player_num):
         kick_batch[ind, player_num] = Variable(torch.FloatTensor(
             np.array([0, 0, 0, 1, 0, 0, 0, 0, np.random.uniform(0, 100) , np.random.uniform(-180, 180)])))
 
-        ### TODO: ANSHUL. Add the good Q bad Q thing from before if possible.
+        ball_angle_sin = elem[player_num][51]
+        ang = np.degrees(np.arcsin(ball_angle_sin.data[0]))
+        if ang > 0:
+            bad_ang = ang - 180
+        else:
+            bad_ang = ang + 180
+
+        good_batch[ind, player_num] = Variable(torch.FloatTensor(
+            np.array([1, 0, 0, 0, 10, ang, 0, 0, 0, 0])))
+        bad_batch[ind, player_num] = Variable(torch.FloatTensor(
+            np.array([1, 0, 0, 0, 10, bad_ang, 0, 0, 0, 0])))
 
     move_batch = move_batch.view(batch_size, -1)
     turn_batch = turn_batch.view(batch_size, -1)
     tackle_batch = tackle_batch.view(batch_size, -1)
     kick_batch = kick_batch.view(batch_size, -1)
+    good_batch = good_batch.view(batch_size, -1)
+    bad_batch = bad_batch.view(batch_size, -1)
 
     target_move = maddpg.critic_predict(whole_state, move_batch, player_num)
     target_turn = maddpg.critic_predict(whole_state, turn_batch, player_num)
     target_tackle = maddpg.critic_predict(whole_state, tackle_batch, player_num)
     target_kick = maddpg.critic_predict(whole_state, kick_batch, player_num)
+    target_good = maddpg.critic_predict(whole_state, good_batch, player_num)
+    target_bad = maddpg.critic_predict(whole_state, bad_batch, player_num)
 
     ep_move_q = target_move.mean().data.numpy()[0]
     ep_turn_q = target_turn.mean().data.numpy()[0]
     ep_tackle_q = target_tackle.mean().data.numpy()[0]
     ep_kick_q = target_kick.mean().data.numpy()[0]
+    ep_good_q = target_good.mean().data.numpy()[0]
+    ep_bad_q = target_bad.mean().data.numpy()[0]
 
-    player_stats = [ep_move_q, ep_turn_q, ep_tackle_q, ep_kick_q]
+    player_stats = [ep_move_q, ep_turn_q, ep_tackle_q, ep_kick_q, ep_good_q, ep_bad_q]
     return player_stats
 
 
@@ -279,6 +299,8 @@ def run():
     dset_turn = stats_grp.create_dataset("ep_turn_q", (n_agents, MAX_EPISODES), dtype='f')
     dset_tackle = stats_grp.create_dataset("ep_tackle_q", (n_agents, MAX_EPISODES), dtype='f')
     dset_kick = stats_grp.create_dataset("ep_kick_q", (n_agents, MAX_EPISODES), dtype='f')
+    dset_good = stats_grp.create_dataset("ep_good_q", (n_agents, MAX_EPISODES), dtype='f')
+    dset_bad = stats_grp.create_dataset("ep_bad_q", (n_agents, MAX_EPISODES), dtype='f')
     dset_rewards = stats_grp.create_dataset("ep_reward", (n_agents, MAX_EPISODES), dtype='f')
     dset_closs = stats_grp.create_dataset("ep_closs", (n_agents, MAX_EPISODES), dtype='f')
     dset_aloss = stats_grp.create_dataset("ep_aloss", (n_agents, MAX_EPISODES), dtype='f')
@@ -308,7 +330,8 @@ def run():
     while True:
         # State_t, Action, State_t+1, transition reward, terminal, episodre reward, episode #
         p1_sts, p1_acts, p1_sts1, p1_rws, terminal1, episode_rew1, ep1 = q1.get()
-        p2_sts, p2_acts, p2_sts1, p2_rws, terminal2 , episode_rew2, ep2= q2.get()
+        p2_sts, p2_acts, p2_sts1, p2_rws, terminal2 , episode_rew2, ep2 = q2.get()
+
         ep1, step1 = ep1
         ep2, step2 = ep2
 
@@ -335,14 +358,20 @@ def run():
                 p1_logstats = extra_stats(maddpg, 0)
                 p2_logstats = extra_stats(maddpg, 1)
                 all_logstats = np.stack([p1_logstats, p2_logstats])
+
                 dset_move[:, maddpg.episode_done] = all_logstats[:, 0]
                 dset_turn[:, maddpg.episode_done] = all_logstats[:, 1]
                 dset_tackle[:, maddpg.episode_done] = all_logstats[:, 2]
                 dset_kick[:, maddpg.episode_done] = all_logstats[:, 3]
+                dset_good[:, maddpg.episode_done] = all_logstats[:, 4]
+                dset_bad[:, maddpg.episode_done] = all_logstats[:, 5]
+
                 dset_move.flush()
                 dset_turn.flush()
                 dset_tackle.flush()
                 dset_kick.flush()
+                dset_good.flush()
+                dset_bad.flush()
 
             dset_rewards[:, maddpg.episode_done] = np.array([episode_rew1, episode_rew2]).reshape((1,2))
             dset_rewards.flush()
