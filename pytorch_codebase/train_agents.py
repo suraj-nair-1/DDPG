@@ -15,12 +15,14 @@ import torch as th
 import time
 import h5py
 import copy
+import traceback
+import subprocess
 
 LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 #LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 #LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
 
-LOGNUM = 3
+LOGNUM = 4
 PRIORITIZED = True
 
 # Max training steps
@@ -45,11 +47,13 @@ EPS_GREEDY_INIT = 1.0
 # Size of replay buffer
 capacity = 1000000
 batch_size = 1024
-eps_before_train = 5
+eps_before_train = 50
 
 GPUENABLED = False
 ORACLE = False
-PORT = 4500
+PORT = int(sys.argv[1])
+
+import time
 
 FloatTensor = torch.cuda.FloatTensor if GPUENABLED else torch.FloatTensor
 
@@ -170,13 +174,11 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
             except:
                 states = states.float()
             states = Variable(states).type(FloatTensor)
+            actions = maddpg.select_action(states, player_num).data
 
-            actions = maddpg.select_action(states, player_num).data.cpu()
             states1, terminal = take_action_and_step(actions.numpy(), env, max(0.1, 1 - ITERATIONS / EPS_ITERATIONS_ANNEAL))
 
-
             curr_ball_proxs, curr_goal_dists, curr_kickables = get_curr_state_vars(states1)
-
             action_rewards = np.zeros((1,))
             if j != 0:
                 # print curr_ball_proxs,curr_goal_dists
@@ -210,6 +212,7 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
             ###########################################################
             if terminal:
                 print terminal
+                assert terminal != 5
                 print('| Reward: ' , rr, " | Episode", ep)
                 break
 
@@ -219,7 +222,7 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
                 pass
 
             try:
-                new = feedback_queue.get(timeout=2)
+                new = feedback_queue.get(timeout=1.5)
             except:
                 print "TIMEOUT"
 
@@ -375,6 +378,7 @@ def run():
 
                 dset_rewards[:, maddpg.episode_done] = np.array([episode_rew1, episode_rew2]).reshape((1,2))
                 dset_rewards.flush()
+                c_loss, a_loss = maddpg.update_policy(prioritized = True)
                 if c_loss is not None:
                     for i in range(len(c_loss)):
                         c_loss[i] = c_loss[i].data.numpy()
@@ -410,8 +414,10 @@ def run():
             maddpg.steps_done += 1
             itr += 1
     except Exception, e:
+        #subprocess.call('killall -9 rcssserver', shell=True)
         r1.put(None)
         r2.put(None)
+        traceback.print_exc()
         raise e
 
 
