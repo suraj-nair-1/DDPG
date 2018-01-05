@@ -22,7 +22,7 @@ LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 #LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 #LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
 
-LOGNUM = 4
+LOGNUM = int(sys.argv[2])
 PRIORITIZED = True
 
 # Max training steps
