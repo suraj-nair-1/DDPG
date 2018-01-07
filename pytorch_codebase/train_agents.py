@@ -280,12 +280,12 @@ def extra_stats(maddpg, player_num):
     target_good = maddpg.critic_predict(whole_state, good_batch, player_num)
     target_bad = maddpg.critic_predict(whole_state, bad_batch, player_num)
 
-    ep_move_q = target_move.mean().data.numpy()[0]
-    ep_turn_q = target_turn.mean().data.numpy()[0]
-    ep_tackle_q = target_tackle.mean().data.numpy()[0]
-    ep_kick_q = target_kick.mean().data.numpy()[0]
-    ep_good_q = target_good.mean().data.numpy()[0]
-    ep_bad_q = target_bad.mean().data.numpy()[0]
+    ep_move_q = target_move.mean().data.cpu().numpy()[0]
+    ep_turn_q = target_turn.mean().data.cpu().numpy()[0]
+    ep_tackle_q = target_tackle.mean().data.cpu().numpy()[0]
+    ep_kick_q = target_kick.mean().data.cpu().numpy()[0]
+    ep_good_q = target_good.mean().data.cpu().numpy()[0]
+    ep_bad_q = target_bad.mean().data.cpu().numpy()[0]
 
     player_stats = [ep_move_q, ep_turn_q, ep_tackle_q, ep_kick_q, ep_good_q, ep_bad_q]
     return player_stats
