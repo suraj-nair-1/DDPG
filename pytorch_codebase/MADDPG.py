@@ -169,6 +169,10 @@ class MADDPG:
             low = self.actors[agent].low_action_bound
             low = low.repeat(action_i.size()[0], 1)
 
+            if self.use_cuda:
+                high.cuda()
+                low.cuda()
+
             pmax = ((high - params) / (high - low))
             pmin = ((params - low) / (high - low))
 
