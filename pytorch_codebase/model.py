@@ -55,7 +55,10 @@ class Actor(nn.Module):
         r1 = F.softmax(r1)
         r2 = F.sigmoid(r2)
 
-        r2 = (r2 * (self.high_action_bound - self.low_action_bound)) + self.low_action_bound
+        if r2.data.type() == 'torch.cuda.FloatTensor':
+            r2 = (r2 * (self.high_action_bound.cuda() - self.low_action_bound.cuda())) + self.low_action_bound.cuda()
+        else:
+            r2 = (r2 * (self.high_action_bound - self.low_action_bound)) + self.low_action_bound
         out = th.cat((r1, r2), 1)
 
 
