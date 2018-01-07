@@ -67,14 +67,14 @@ class MADDPG:
         self.use_cuda = True
         for x in self.actors:
             x.cuda()
-            x.low_action_bound=x.low_action_bound.cuda()
-            x.high_action_bound=x.high_action_bound.cuda()
+            x.low_action_bound.cuda()
+            x.high_action_bound.cuda()
         for x in self.critics:
             x.cuda()
         for x in self.actors_target:
             x.cuda()
-            x.low_action_bound=x.low_action_bound.cuda()
-            x.high_action_bound=x.high_action_bound.cuda()
+            x.low_action_bound.cuda()
+            x.high_action_bound.cuda()
         for x in self.critics_target:
             x.cuda()
 
@@ -82,14 +82,14 @@ class MADDPG:
         self.use_cuda = False
         for x in self.actors:
             x.cpu()
-            x.low_action_bound=x.low_action_bound.cpu()
-            x.high_action_bound=x.high_action_bound.cpu()
+            x.low_action_bound.cpu()
+            x.high_action_bound.cpu()
         for x in self.critics:
             x.cpu()
         for x in self.actors_target:
             x.cpu()
-            x.low_action_bound= x.low_action_bound.cpu()
-            x.high_action_bound=x.high_action_bound.cpu()
+            x.low_action_bound.cpu()
+            x.high_action_bound.cpu()
         for x in self.critics_target:
             x.cpu()
 
@@ -168,6 +168,10 @@ class MADDPG:
             high = high.repeat(action_i.size()[0], 1)
             low = self.actors[agent].low_action_bound
             low = low.repeat(action_i.size()[0], 1)
+
+            if params.data.type() == 'torch.cuda.FloatTensor':
+                high = high.cuda()
+                low = low.cuda()
 
             pmax = ((high - params) / (high - low))
             pmin = ((params - low) / (high - low))
