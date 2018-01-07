@@ -169,7 +169,7 @@ class MADDPG:
             low = self.actors[agent].low_action_bound
             low = low.repeat(action_i.size()[0], 1)
 
-            if self.use_cuda:
+            if params.data.type() == 'torch.cuda.FloatTensor':
                 high.cuda()
                 low.cuda()
 
