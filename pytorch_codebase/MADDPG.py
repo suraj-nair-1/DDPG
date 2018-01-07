@@ -73,6 +73,8 @@ class MADDPG:
             x.cuda()
         for x in self.actors_target:
             x.cuda()
+            x.low_action_bound.cuda()
+            x.high_action_bound.cuda()
         for x in self.critics_target:
             x.cuda()
 
@@ -86,6 +88,8 @@ class MADDPG:
             x.cpu()
         for x in self.actors_target:
             x.cpu()
+            x.low_action_bound.cpu()
+            x.high_action_bound.cpu()
         for x in self.critics_target:
             x.cpu()
 
