@@ -8,6 +8,7 @@ from torch.autograd import Variable
 import torch.nn as nn
 import numpy as np
 from params import scale_reward
+import time
 
 
 def soft_update(target, source, t):
@@ -106,6 +107,7 @@ class MADDPG:
         c_loss = []
         a_loss = []
         for agent in range(self.n_agents):
+            print time.time(), "A", agent
             transitions = self.memory.sample(self.batch_size, prioritized=prioritized)
             batch = Experience(*zip(*transitions))
             non_final_mask = ByteTensor(list(map(lambda s: s is not None,
@@ -114,6 +116,7 @@ class MADDPG:
             state_batch = Variable(th.stack(batch.states).type(FloatTensor))
             action_batch = Variable(th.stack(batch.actions).type(FloatTensor))
             reward_batch = Variable(th.stack(batch.rewards).type(FloatTensor))
+            print time.time(), "B", agent
             # : (batch_size_non_final) x n_agents x dim_obs
             non_final_next_states = Variable(th.stack(
                 [s for s in batch.next_states
