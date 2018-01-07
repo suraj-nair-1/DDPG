@@ -229,8 +229,8 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
 def extra_stats(maddpg, player_num):
     transitions = maddpg.memory.sample(batch_size)
     batch = Experience(*zip(*transitions))
-    s_batch = Variable(th.stack(batch.states).type(FloatTensor))
-    action_batch = Variable(th.stack(batch.actions).type(FloatTensor))
+    s_batch = Variable(th.stack(batch.states).type(torch.cuda.FloatTensor))
+    action_batch = Variable(th.stack(batch.actions).type(torch.cuda.FloatTensor))
 
     whole_state = s_batch.view(batch_size, -1)
     move_batch = action_batch.clone()
@@ -243,16 +243,16 @@ def extra_stats(maddpg, player_num):
 
     for ind, elem in enumerate(s_batch):
         move_batch[ind, player_num] = Variable(torch.FloatTensor(
-            np.array([1, 0, 0, 0,np.random.uniform(0, 100) , np.random.uniform(-180, 180), 0, 0, 0, 0])))
+            np.array([1, 0, 0, 0,np.random.uniform(0, 100) , np.random.uniform(-180, 180), 0, 0, 0, 0]))).type(FloatTensor)
 
         turn_batch[ind, player_num] = Variable(torch.FloatTensor(
-            np.array([0, 1, 0, 0, 0, 0, np.random.uniform(-180, 180), 0, 0, 0])))
+            np.array([0, 1, 0, 0, 0, 0, np.random.uniform(-180, 180), 0, 0, 0]))).type(FloatTensor)
 
         tackle_batch[ind, player_num] = Variable(torch.FloatTensor(
-            np.array([0, 0, 1, 0, 0, 0, 0, np.random.uniform(-180, 180), 0, 0])))
+            np.array([0, 0, 1, 0, 0, 0, 0, np.random.uniform(-180, 180), 0, 0]))).type(FloatTensor)
 
         kick_batch[ind, player_num] = Variable(torch.FloatTensor(
-            np.array([0, 0, 0, 1, 0, 0, 0, 0, np.random.uniform(0, 100) , np.random.uniform(-180, 180)])))
+            np.array([0, 0, 0, 1, 0, 0, 0, 0, np.random.uniform(0, 100) , np.random.uniform(-180, 180)]))).type(FloatTensor)
 
         ball_angle_sin = elem[player_num][51]
         ang = np.degrees(np.arcsin(ball_angle_sin.data[0]))
@@ -262,9 +262,9 @@ def extra_stats(maddpg, player_num):
             bad_ang = ang + 180
 
         good_batch[ind, player_num] = Variable(torch.FloatTensor(
-            np.array([1, 0, 0, 0, 10, ang, 0, 0, 0, 0])))
+            np.array([1, 0, 0, 0, 10, ang, 0, 0, 0, 0]))).type(FloatTensor)
         bad_batch[ind, player_num] = Variable(torch.FloatTensor(
-            np.array([1, 0, 0, 0, 10, bad_ang, 0, 0, 0, 0])))
+            np.array([1, 0, 0, 0, 10, bad_ang, 0, 0, 0, 0]))).type(FloatTensor)
 
     move_batch = move_batch.view(batch_size, -1)
     turn_batch = turn_batch.view(batch_size, -1)
@@ -329,6 +329,7 @@ def run():
     p2.start()
 
     itr = 1
+    maddpg.to_gpu()
 
     try:
 
@@ -397,6 +398,7 @@ def run():
                 ### each process has its own GIL, we need some way of updating the
                 ### policies in the agent processes.
                 copy_maddpg = copy.deepcopy(maddpg)
+                copy_maddpg.to_cpu()
                 copy_maddpg.memory.memory = []
                 copy_maddpg.memory.position = 0
                 r1.put(copy_maddpg)
