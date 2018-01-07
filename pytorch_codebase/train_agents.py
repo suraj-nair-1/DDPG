@@ -47,7 +47,7 @@ EPS_GREEDY_INIT = 1.0
 # Size of replay buffer
 capacity = 1000000
 batch_size = 1024
-eps_before_train = 50
+eps_before_train = 5
 
 GPUENABLED = False
 ORACLE = False
@@ -55,7 +55,7 @@ PORT = int(sys.argv[1])
 
 import time
 
-FloatTensor = torch.cuda.FloatTensor if GPUENABLED else torch.FloatTensor
+FloatTensor = torch.cuda.FloatTensor if False else torch.FloatTensor
 
 def connect():
     hfo = HFOEnvironment()
@@ -229,8 +229,8 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
 def extra_stats(maddpg, player_num):
     transitions = maddpg.memory.sample(batch_size)
     batch = Experience(*zip(*transitions))
-    s_batch = Variable(th.stack(batch.states).type(torch.cuda.FloatTensor))
-    action_batch = Variable(th.stack(batch.actions).type(torch.cuda.FloatTensor))
+    s_batch = Variable(th.stack(batch.states).type(FloatTensor))
+    action_batch = Variable(th.stack(batch.actions).type(FloatTensor))
 
     whole_state = s_batch.view(batch_size, -1)
     move_batch = action_batch.clone()
@@ -329,7 +329,8 @@ def run():
     p2.start()
 
     itr = 1
-    maddpg.to_gpu()
+    if GPUENABLED:
+        maddpg.to_gpu()
 
     try:
 
@@ -353,7 +354,10 @@ def run():
 
             rws = np.stack([p1_rws, p2_rws])
             rws = torch.FloatTensor(rws)
-            maddpg.memory.push(sts, acts, sts1, rws)
+            if GPUENABLED:
+                maddpg.memory.push(sts.cuda(), acts.cuda(), sts1.cuda(), rws.cuda())
+            else:
+                maddpg.memory.push(sts, acts, sts1, rws)
 
             # At The End of each episode log stats and update target
             if (terminal1 != 0):
@@ -382,9 +386,9 @@ def run():
                 c_loss, a_loss = maddpg.update_policy(prioritized = True)
                 if c_loss is not None:
                     for i in range(len(c_loss)):
-                        c_loss[i] = c_loss[i].data.numpy()
+                        c_loss[i] = c_loss[i].data.cpu().numpy()
                     for i in range(len(a_loss)):
-                        a_loss[i] = a_loss[i].data.numpy()
+                        a_loss[i] = a_loss[i].data.cpu().numpy()
                     dset_closs[:, maddpg.episode_done] = np.array(c_loss).reshape((1,2))
                     dset_aloss[:, maddpg.episode_done] = np.array(a_loss).reshape((1,2))
                     dset_closs.flush()
@@ -409,7 +413,9 @@ def run():
 
             # training step every 10 steps
             if itr % 10 == 0:
+                print time.time()
                 c_loss, a_loss = maddpg.update_policy(prioritized = True)
+                print time.time()
                 print "LOSS", c_loss, a_loss
 
 
