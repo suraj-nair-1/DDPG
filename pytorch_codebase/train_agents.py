@@ -329,6 +329,7 @@ def run():
     p2.start()
 
     itr = 1
+    maddpg.to_gpu()
 
     try:
 
@@ -397,6 +398,7 @@ def run():
                 ### each process has its own GIL, we need some way of updating the
                 ### policies in the agent processes.
                 copy_maddpg = copy.deepcopy(maddpg)
+                copy_maddpg.to_cpu()
                 copy_maddpg.memory.memory = []
                 copy_maddpg.memory.position = 0
                 r1.put(copy_maddpg)
