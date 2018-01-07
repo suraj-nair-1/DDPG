@@ -63,6 +63,29 @@ class MADDPG:
         self.steps_done = 0
         self.episode_done = 0
 
+    def to_gpu(self):
+        self.use_cuda = True
+        for x in self.actors:
+            x.cuda()
+        for x in self.critics:
+            x.cuda()
+        for x in self.actors_target:
+            x.cuda()
+        for x in self.critics_target:
+            x.cuda()
+
+    def to_cpu(self):
+        self.use_cuda = False
+        for x in self.actors:
+            x.cpu()
+        for x in self.critics:
+            x.cpu()
+        for x in self.actors_target:
+            x.cpu()
+        for x in self.critics_target:
+            x.cpu()
+
+
     def update_policy(self, prioritized=False):
         # do not train until exploration is enough
         # print 'update'
