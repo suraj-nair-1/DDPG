@@ -21,6 +21,7 @@ import subprocess
 LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 #LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 #LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
+#LOGPATH = "/home/anshul/Desktop/"
 
 LOGNUM = int(sys.argv[2])
 PRIORITIZED = True
@@ -229,8 +230,8 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
 def extra_stats(maddpg, player_num):
     transitions = maddpg.memory.sample(batch_size)
     batch = Experience(*zip(*transitions))
-    s_batch = Variable(th.stack(batch.states).type(FloatTensor))
-    action_batch = Variable(th.stack(batch.actions).type(FloatTensor))
+    s_batch = Variable(th.stack(batch.states))
+    action_batch = Variable(th.stack(batch.actions))
 
     whole_state = s_batch.view(batch_size, -1)
     move_batch = action_batch.clone()
@@ -243,16 +244,16 @@ def extra_stats(maddpg, player_num):
 
     for ind, elem in enumerate(s_batch):
         move_batch[ind, player_num] = Variable(torch.FloatTensor(
-            np.array([1, 0, 0, 0,np.random.uniform(0, 100) , np.random.uniform(-180, 180), 0, 0, 0, 0]))).type(FloatTensor)
+            np.array([1, 0, 0, 0,np.random.uniform(0, 100) , np.random.uniform(-180, 180), 0, 0, 0, 0])))
 
         turn_batch[ind, player_num] = Variable(torch.FloatTensor(
-            np.array([0, 1, 0, 0, 0, 0, np.random.uniform(-180, 180), 0, 0, 0]))).type(FloatTensor)
+            np.array([0, 1, 0, 0, 0, 0, np.random.uniform(-180, 180), 0, 0, 0])))
 
         tackle_batch[ind, player_num] = Variable(torch.FloatTensor(
-            np.array([0, 0, 1, 0, 0, 0, 0, np.random.uniform(-180, 180), 0, 0]))).type(FloatTensor)
+            np.array([0, 0, 1, 0, 0, 0, 0, np.random.uniform(-180, 180), 0, 0])))
 
         kick_batch[ind, player_num] = Variable(torch.FloatTensor(
-            np.array([0, 0, 0, 1, 0, 0, 0, 0, np.random.uniform(0, 100) , np.random.uniform(-180, 180)]))).type(FloatTensor)
+            np.array([0, 0, 0, 1, 0, 0, 0, 0, np.random.uniform(0, 100) , np.random.uniform(-180, 180)])))
 
         ball_angle_sin = elem[player_num][51]
         ang = np.degrees(np.arcsin(ball_angle_sin.data[0]))
@@ -262,9 +263,9 @@ def extra_stats(maddpg, player_num):
             bad_ang = ang + 180
 
         good_batch[ind, player_num] = Variable(torch.FloatTensor(
-            np.array([1, 0, 0, 0, 10, ang, 0, 0, 0, 0]))).type(FloatTensor)
+            np.array([1, 0, 0, 0, 10, ang, 0, 0, 0, 0])))
         bad_batch[ind, player_num] = Variable(torch.FloatTensor(
-            np.array([1, 0, 0, 0, 10, bad_ang, 0, 0, 0, 0]))).type(FloatTensor)
+            np.array([1, 0, 0, 0, 10, bad_ang, 0, 0, 0, 0])))
 
     move_batch = move_batch.view(batch_size, -1)
     turn_batch = turn_batch.view(batch_size, -1)
