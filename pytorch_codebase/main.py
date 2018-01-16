@@ -78,7 +78,7 @@ for i_episode in range(n_episode):
                   encounter_reward))
 
     if win is None:
-        win = vis.line(X=np.arange(i_episode, i_episode+1),
+        win = vis.line(X=np.arange(i_episode, i_episode + 1),
                        Y=np.array([
                            np.append(total_reward, rr)]),
                        opts=dict(
@@ -96,13 +96,13 @@ for i_episode in range(n_episode):
                            ['Agent-%d' % i for i in range(n_agents)]))
     else:
         vis.line(X=np.array(
-            [np.array(i_episode).repeat(n_agents+1)]),
-                 Y=np.array([np.append(total_reward,
-                                       rr)]),
-                 win=win,
-                 update='append')
+            [np.array(i_episode).repeat(n_agents + 1)]),
+            Y=np.array([np.append(total_reward,
+                                  rr)]),
+            win=win,
+            update='append')
     if param is None:
-        param = vis.line(X=np.arange(i_episode, i_episode+1),
+        param = vis.line(X=np.arange(i_episode, i_episode + 1),
                          Y=np.array([maddpg.var[0]]),
                          opts=dict(
                              ylabel='Var',
