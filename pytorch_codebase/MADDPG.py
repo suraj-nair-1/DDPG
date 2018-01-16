@@ -9,6 +9,7 @@ import torch.nn as nn
 import numpy as np
 from params import scale_reward
 import time
+import os
 
 
 def soft_update(target, source, t):
@@ -25,6 +26,7 @@ def hard_update(target, source):
 
 
 class MADDPG:
+
     def __init__(self, n_agents, dim_obs, dim_act, batch_size,
                  capacity, episodes_before_train):
         self.actors = [Actor(dim_obs, dim_act) for i in range(n_agents)]
@@ -38,7 +40,7 @@ class MADDPG:
         self.n_actions = dim_act
         self.memory = ReplayMemory(capacity)
         self.batch_size = batch_size
-        self.use_cuda = False # th.cuda.is_available()
+        self.use_cuda = False  # th.cuda.is_available()
 
         self.episodes_before_train = episodes_before_train
 
@@ -63,6 +65,15 @@ class MADDPG:
 
         self.steps_done = 0
         self.episode_done = 0
+
+    def save(self, logpath, lognum):
+        path = logpath + "saved_models/run_" +
+            str(lognum) + "_" + self.episode_done
+        os.mkdir(path)
+        for c, x in self.actors_target:
+            th.save(x, os.path.join(path, 'actor_agent_%d.pt' % (c)))
+        for c, x in self.critics_target:
+            th.save(x, os.path.join(path, 'critic_agent_%d.pt' % (c)))
 
     def to_gpu(self):
         self.use_cuda = True
@@ -94,7 +105,6 @@ class MADDPG:
         for x in self.critics_target:
             x.cpu()
 
-
     def update_policy(self, prioritized=False):
         # do not train until exploration is enough
         # print 'update'
@@ -108,7 +118,8 @@ class MADDPG:
         a_loss = []
         for agent in range(self.n_agents):
             print time.time(), "A", agent
-            transitions = self.memory.sample(self.batch_size, prioritized=prioritized)
+            transitions = self.memory.sample(
+                self.batch_size, prioritized=prioritized)
             batch = Experience(*zip(*transitions))
             non_final_mask = ByteTensor(list(map(lambda s: s is not None,
                                                  batch.next_states)))
@@ -165,7 +176,6 @@ class MADDPG:
             actor_loss = actor_loss.mean()
             actor_loss.backward()
 
-
             params = action_i[:, 4:]
             high = self.actors[agent].high_action_bound
             high = high.repeat(action_i.size()[0], 1)
@@ -183,7 +193,7 @@ class MADDPG:
             g1 = (grad < 0).float() * pmin
             g2 = (grad >= 0).float() * pmax
 
-            action_i.grad = th.cat([action_i.grad[:, :4], (g1+g2)], 1)
+            action_i.grad = th.cat([action_i.grad[:, :4], (g1 + g2)], 1)
 
             self.actor_optimizer[agent].step()
             c_loss.append(loss_Q)
