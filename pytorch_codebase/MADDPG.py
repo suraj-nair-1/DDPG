@@ -67,12 +67,13 @@ class MADDPG:
         self.episode_done = 0
 
     def save(self, logpath, lognum):
-        path = logpath + "saved_models/run_" +
-            str(lognum) + "_" + self.episode_done
-        os.mkdir(path)
-        for c, x in self.actors_target:
+        path = logpath + "saved_models/run_" + \
+            str(lognum) + "_" + str(self.episode_done)
+        if not os.path.isdir(path):
+            os.mkdir(path)
+        for c, x in enumerate(self.actors_target):
             th.save(x, os.path.join(path, 'actor_agent_%d.pt' % (c)))
-        for c, x in self.critics_target:
+        for c, x in enumerate(self.critics_target):
             th.save(x, os.path.join(path, 'critic_agent_%d.pt' % (c)))
 
     def to_gpu(self):
