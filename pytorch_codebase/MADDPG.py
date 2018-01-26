@@ -67,8 +67,7 @@ class MADDPG:
         self.episode_done = 0
 
     def save(self, logpath, lognum):
-        path = logpath + "saved_models/run_" +
-            str(lognum) + "_" + self.episode_done
+        path = logpath + "saved_models/run_" + str(lognum) + "_" + self.episode_done
         os.mkdir(path)
         for c, x in self.actors_target:
             th.save(x, os.path.join(path, 'actor_agent_%d.pt' % (c)))
