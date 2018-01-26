@@ -67,12 +67,26 @@ class MADDPG:
         self.episode_done = 0
 
     def save(self, logpath, lognum):
-        path = logpath + "saved_models/run_" + str(lognum) + "_" + self.episode_done
-        os.mkdir(path)
-        for c, x in self.actors_target:
+        path = logpath + "saved_models/run_" + \
+            str(lognum) + "_" + str(self.episode_done)
+        if not os.path.isdir(path):
+            os.mkdir(path)
+        for c, x in enumerate(self.actors_target):
             th.save(x, os.path.join(path, 'actor_agent_%d.pt' % (c)))
-        for c, x in self.critics_target:
+        for c, x in enumerate(self.critics_target):
             th.save(x, os.path.join(path, 'critic_agent_%d.pt' % (c)))
+
+    def load(self, logpath, lognum, episode_done):
+        path = logpath + "saved_models/run_" + \
+            str(lognum) + "_" + str(episode_done)
+        for i in range(self.n_agents):
+            actor_path = os.path.join(path, 'actor_agent_%d.pt' % (i))
+            critic_path = os.path.join(path, 'critic_agent_%d.pt' % (i))
+            if os.path.exists(actor_path):
+                self.actors[i] = th.load(actor_path)
+                self.actors_target[i] = th.load(actor_path)
+                self.critics[i] = th.load(critic_path)
+                self.critics_target[i] = th.load(critic_path)
 
     def to_gpu(self):
         self.use_cuda = True
