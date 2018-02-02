@@ -8,9 +8,9 @@ import threading
 import torch
 from torch.autograd import Variable
 from multiprocessing import Pool, Lock
-from memory import ReplayMemory, Experience
+from memory import ReplayMemory
 import multiprocessing
-from MADDPG import MADDPG
+from MADDPG import MADDPG, OMADDPG
 import numpy as np
 import torch as th
 import time
@@ -19,12 +19,14 @@ import copy
 import traceback
 import subprocess
 
-LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
-#LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
-#LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
-#LOGPATH = "/home/anshul/Desktop/"
+# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
+# LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
+# LOGPATH = "/home/anshul/Desktop/"
 
 LOGNUM = int(sys.argv[2])
+OPTIONS = int(sys.argv[3])
+N_OPTIONS = 2
 PRIORITIZED = True
 
 # Max training steps
@@ -48,8 +50,8 @@ EPS_GREEDY_INIT = 1.0
 
 # Size of replay buffer
 capacity = 1000000
-batch_size = 1024
-eps_before_train = 5
+batch_size = 32
+eps_before_train = 2
 
 GPUENABLED = False
 ORACLE = False
@@ -68,7 +70,7 @@ def connect():
     return hfo
 
 
-def take_action_and_step(a, env, eps):
+def take_action_and_step(a, o, env, eps):
     if (np.random.random_sample() <= eps):
         acts = np.random.uniform(1, 10, 4)
         a[:4] = acts / np.sum(acts)
@@ -78,6 +80,8 @@ def take_action_and_step(a, env, eps):
         a[7] = np.random.uniform(-180, 180)
         a[8] = np.random.uniform(0, 100)
         a[9] = np.random.uniform(-180, 180)
+
+        o = np.random.randint(0, 2)
 
     index = np.argmax(a[:4])
     if index == 0:
@@ -92,7 +96,7 @@ def take_action_and_step(a, env, eps):
     env.act(*action)
     terminal = env.step()
     s1 = env.getState()
-    return s1, terminal
+    return s1, terminal, th.FloatTensor(a), o
 
 
 def get_curr_state_vars(s1):
@@ -178,10 +182,11 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
             except:
                 states = states.float()
             states = Variable(states).type(FloatTensor)
-            actions = maddpg.select_action(states, player_num).data
+            actions, o = maddpg.select_action(states, player_num)
+            actions = actions.data
 
-            states1, terminal = take_action_and_step(
-                actions.numpy(), env, max(0.1, 1 - ITERATIONS / EPS_ITERATIONS_ANNEAL))
+            states1, terminal, actions, o = take_action_and_step(
+                actions.numpy(), o, env, max(0.1, 1 - ITERATIONS / EPS_ITERATIONS_ANNEAL))
 
             curr_ball_proxs, curr_goal_dists, curr_kickables = get_curr_state_vars(
                 states1)
@@ -205,10 +210,11 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
             # if j == MAX_EP_STEPS - 1:
             #     player_queue.put((states.data, actions, None, action_rewards, terminal, rr, ep))
             # else:
-            #     player_queue.put((states.data, actions, states1, action_rewards, terminal, rr, ep))
+            # player_queue.put((states.data, actions, states1, action_rewards,
+            # terminal, rr, ep))
 
             player_queue.put((states.data, actions, states1,
-                              action_rewards, terminal, rr, (ep, j)))
+                              action_rewards, terminal, rr, (ep, j), o))
             states = states1
             print "PLAYER", player_num, maddpg.episode_done
 
@@ -233,9 +239,9 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
                 print "TIMEOUT"
 
 
-def extra_stats(maddpg, player_num):
+def extra_stats(maddpg, player_num, opt):
     transitions = maddpg.memory.sample(batch_size)
-    batch = Experience(*zip(*transitions))
+    batch = maddpg.memory.Experience(*zip(*transitions))
     s_batch = Variable(th.stack(batch.states))
     action_batch = Variable(th.stack(batch.actions))
 
@@ -280,13 +286,17 @@ def extra_stats(maddpg, player_num):
     good_batch = good_batch.view(batch_size, -1)
     bad_batch = bad_batch.view(batch_size, -1)
 
-    target_move = maddpg.critic_predict(whole_state, move_batch, player_num)
-    target_turn = maddpg.critic_predict(whole_state, turn_batch, player_num)
+    target_move = maddpg.critic_predict(
+        whole_state, move_batch, player_num, opt)
+    target_turn = maddpg.critic_predict(
+        whole_state, turn_batch, player_num, opt)
     target_tackle = maddpg.critic_predict(
-        whole_state, tackle_batch, player_num)
-    target_kick = maddpg.critic_predict(whole_state, kick_batch, player_num)
-    target_good = maddpg.critic_predict(whole_state, good_batch, player_num)
-    target_bad = maddpg.critic_predict(whole_state, bad_batch, player_num)
+        whole_state, tackle_batch, player_num, opt)
+    target_kick = maddpg.critic_predict(
+        whole_state, kick_batch, player_num, opt)
+    target_good = maddpg.critic_predict(
+        whole_state, good_batch, player_num, opt)
+    target_bad = maddpg.critic_predict(whole_state, bad_batch, player_num, opt)
 
     ep_move_q = target_move.mean().data.cpu().numpy()[0]
     ep_turn_q = target_turn.mean().data.cpu().numpy()[0]
@@ -309,23 +319,23 @@ def run():
                   '.txt', "w", libver='latest')
     stats_grp = f.create_group("statistics")
     dset_move = stats_grp.create_dataset(
-        "ep_move_q", (n_agents, MAX_EPISODES), dtype='f')
+        "ep_move_q", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
     dset_turn = stats_grp.create_dataset(
-        "ep_turn_q", (n_agents, MAX_EPISODES), dtype='f')
+        "ep_turn_q", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
     dset_tackle = stats_grp.create_dataset(
-        "ep_tackle_q", (n_agents, MAX_EPISODES), dtype='f')
+        "ep_tackle_q", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
     dset_kick = stats_grp.create_dataset(
-        "ep_kick_q", (n_agents, MAX_EPISODES), dtype='f')
+        "ep_kick_q", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
     dset_good = stats_grp.create_dataset(
-        "ep_good_q", (n_agents, MAX_EPISODES), dtype='f')
+        "ep_good_q", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
     dset_bad = stats_grp.create_dataset(
-        "ep_bad_q", (n_agents, MAX_EPISODES), dtype='f')
+        "ep_bad_q", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
     dset_rewards = stats_grp.create_dataset(
         "ep_reward", (n_agents, MAX_EPISODES), dtype='f')
     dset_closs = stats_grp.create_dataset(
-        "ep_closs", (n_agents, MAX_EPISODES), dtype='f')
+        "ep_closs", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
     dset_aloss = stats_grp.create_dataset(
-        "ep_aloss", (n_agents, MAX_EPISODES), dtype='f')
+        "ep_aloss", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
     dset_numdone = stats_grp.create_dataset("ep_numdone", data=np.array([-1]))
     f.swmr_mode = True  # NECESSARY FOR SIMULTANEOUS READ/WRITE
 
@@ -336,8 +346,14 @@ def run():
     fdbk1 = multiprocessing.Queue()
     fdbk2 = multiprocessing.Queue()
 
-    maddpg = MADDPG(n_agents, n_states, n_actions,
-                    batch_size, capacity, eps_before_train)
+    nopts = 2
+
+    if OPTIONS:
+        maddpg = OMADDPG(n_agents, n_states, n_actions,
+                         batch_size, capacity, eps_before_train, nopts)
+    else:
+        maddpg = MADDPG(n_agents, n_states, n_actions,
+                        batch_size, capacity, eps_before_train)
 
     p1 = multiprocessing.Process(
         target=run_process, args=(maddpg, 0, q1, r1, fdbk1))
@@ -359,8 +375,8 @@ def run():
         while True:
             # State_t, Action, State_t+1, transition reward, terminal, episodre
             # reward, episode #
-            p1_sts, p1_acts, p1_sts1, p1_rws, terminal1, episode_rew1, ep1 = q1.get()
-            p2_sts, p2_acts, p2_sts1, p2_rws, terminal2, episode_rew2, ep2 = q2.get()
+            p1_sts, p1_acts, p1_sts1, p1_rws, terminal1, episode_rew1, ep1, o1 = q1.get()
+            p2_sts, p2_acts, p2_sts1, p2_rws, terminal2, episode_rew2, ep2, o2 = q2.get()
 
             ep1, step1 = ep1
             ep2, step2 = ep2
@@ -381,15 +397,24 @@ def run():
                 maddpg.memory.push(sts.cuda(), acts.cuda(),
                                    sts1.cuda(), rws.cuda())
             else:
-                maddpg.memory.push(sts, acts, sts1, rws)
+                if OPTIONS:
+                    os = th.zeros(n_agents, nopts).type(
+                        FloatTensor)
+                    os[0, int(o1)] = 1
+                    os[1, int(o2)] = 1
+                    maddpg.memory.push(sts, acts, sts1, rws, os)
+                else:
+                    maddpg.memory.push(sts, acts, sts1, rws)
 
             # At The End of each episode log stats and update target
             if (terminal1 != 0):
                 # Logging Stats
                 if len(maddpg.memory.memory) > batch_size:
-                    p1_logstats = extra_stats(maddpg, 0)
-                    p2_logstats = extra_stats(maddpg, 1)
-                    all_logstats = np.stack([p1_logstats, p2_logstats])
+                    all_logstats = []
+                    for p in range(n_agents):
+                        for opt in range(N_OPTIONS):
+                            all_logstats.append(extra_stats(maddpg, p, opt))
+                    all_logstats = np.stack(all_logstats)
 
                     dset_move[:, maddpg.episode_done] = all_logstats[:, 0]
                     dset_turn[:, maddpg.episode_done] = all_logstats[:, 1]
@@ -415,9 +440,9 @@ def run():
                     for i in range(len(a_loss)):
                         a_loss[i] = a_loss[i].data.cpu().numpy()
                     dset_closs[:, maddpg.episode_done] = np.array(
-                        c_loss).reshape((1, 2))
+                        c_loss).reshape((1, n_agents * N_OPTIONS))
                     dset_aloss[:, maddpg.episode_done] = np.array(
-                        a_loss).reshape((1, 2))
+                        a_loss).reshape((1, n_agents * N_OPTIONS))
                     dset_closs.flush()
                     dset_aloss.flush()
 
@@ -430,8 +455,9 @@ def run():
                 # policies in the agent processes.
                 copy_maddpg = copy.deepcopy(maddpg)
                 copy_maddpg.to_cpu()
-                copy_maddpg.memory.memory = []
-                copy_maddpg.memory.position = 0
+                # copy_maddpg.memory.memory = []
+                # copy_maddpg.memory.position = 0
+                copy_maddpg.memory = None
                 r1.put(copy_maddpg)
                 r2.put(copy_maddpg)
 
@@ -440,15 +466,13 @@ def run():
 
             # training step every 10 steps
             if itr % 10 == 0:
-                print time.time()
                 c_loss, a_loss = maddpg.update_policy(prioritized=True)
-                print time.time()
                 print "LOSS", c_loss, a_loss
 
             maddpg.steps_done += 1
             itr += 1
     except Exception, e:
-        #subprocess.call('killall -9 rcssserver', shell=True)
+        # subprocess.call('killall -9 rcssserver', shell=True)
         r1.put(None)
         r2.put(None)
         traceback.print_exc()
