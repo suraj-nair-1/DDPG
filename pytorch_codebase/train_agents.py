@@ -19,8 +19,8 @@ import copy
 import traceback
 import subprocess
 
-# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
-LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
+LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+# LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 # LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
 # LOGPATH = "/home/anshul/Desktop/"
 
@@ -50,16 +50,25 @@ EPS_GREEDY_INIT = 1.0
 
 # Size of replay buffer
 capacity = 1000000
-batch_size = 32
-eps_before_train = 2
+batch_size = 256
+eps_before_train = 50
 
 GPUENABLED = False
 ORACLE = False
 PORT = int(sys.argv[1])
+SEED = int(sys.argv[4])
 
 import time
 
 FloatTensor = torch.cuda.FloatTensor if False else torch.FloatTensor
+server_launch_command = "./bin/HFO --headless --frames-per-trial=500 --untouched-time=500 --no-logging --fullstate --offense-agents=2 --defense-npcs=1 --seed " + \
+    sys.argv[4] + " --port " + str(PORT)
+
+
+def reset_server():
+    subprocess.call('kill -9 $(lsof -t -i:' + str(PORT) + ')', shell=True)
+    subprocess.Popen(server_launch_command, shell=True)
+    time.sleep(5)
 
 
 def connect():
@@ -143,17 +152,17 @@ def get_rewards(terminal, curr_ball_prox, curr_goal_dist, curr_kickable,
     return [r], goal_made
 
 
-def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
+def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue, startep):
     env = connect()
 
     if player_num == 0:
-        np.random.seed(12)
+        np.random.seed(SEED)
     else:
-        np.random.seed(111)
+        np.random.seed(SEED * 2)
 
-    ITERATIONS = 0.0
+    ITERATIONS = startep * 500
     NUM_GOALS = 0.0
-    for ep in xrange(MAX_EPISODES):
+    for ep in xrange(startep, MAX_EPISODES):
         ep_reward = 0.0
         ep_ave_max_q = 0.0
 
@@ -216,7 +225,6 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
             player_queue.put((states.data, actions, states1,
                               action_rewards, terminal, rr, (ep, j), o))
             states = states1
-            print "PLAYER", player_num, maddpg.episode_done
 
             ITERATIONS += 1
 
@@ -236,7 +244,7 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
             try:
                 new = feedback_queue.get(timeout=1.5)
             except:
-                print "TIMEOUT"
+                pass
 
 
 def extra_stats(maddpg, player_num, opt):
@@ -314,8 +322,10 @@ def run():
     n_agents = 2
     n_states = 77
     n_actions = 10
+    start_ep = 0
 
-    f = h5py.File(LOGPATH + 'logging/logs' + str(LOGNUM) +
+    lg = LOGNUM
+    f = h5py.File(LOGPATH + 'logging/logs' + str(lg) +
                   '.txt', "w", libver='latest')
     stats_grp = f.create_group("statistics")
     dset_move = stats_grp.create_dataset(
@@ -356,9 +366,9 @@ def run():
                         batch_size, capacity, eps_before_train)
 
     p1 = multiprocessing.Process(
-        target=run_process, args=(maddpg, 0, q1, r1, fdbk1))
+        target=run_process, args=(maddpg, 0, q1, r1, fdbk1, start_ep))
     p2 = multiprocessing.Process(
-        target=run_process, args=(maddpg, 1, q2, r2, fdbk2))
+        target=run_process, args=(maddpg, 1, q2, r2, fdbk2, start_ep))
 
     print "Started"
 
@@ -378,13 +388,15 @@ def run():
             p1_sts, p1_acts, p1_sts1, p1_rws, terminal1, episode_rew1, ep1, o1 = q1.get()
             p2_sts, p2_acts, p2_sts1, p2_rws, terminal2, episode_rew2, ep2, o2 = q2.get()
 
+            print terminal1, terminal2
+
             ep1, step1 = ep1
             ep2, step2 = ep2
 
             assert((ep1 == ep2) and (step1 == step2))
 
             maddpg.episode_done = ep1
-            print "MAIN LOOP", maddpg.episode_done
+            start_ep = ep1
             if (maddpg.episode_done > 0) and (maddpg.episode_done % 500 == 0) and (step1 == 0):
                 maddpg.save(LOGPATH, LOGNUM)
             sts = torch.stack([p1_sts, p2_sts])
@@ -406,7 +418,43 @@ def run():
                 else:
                     maddpg.memory.push(sts, acts, sts1, rws)
 
-            # At The End of each episode log stats and update target
+            if (terminal1 == 5) or (terminal2 == 5):
+                try:
+                    while True:
+                        p1_sts, p1_acts, p1_sts1, p1_rws, terminal1, episode_rew1, ep1, o1 = q1.get(
+                            block=False, timeout=0.001)
+                except:
+                    pass
+                try:
+                    while True:
+                        p2_sts, p2_acts, p2_sts1, p2_rws, terminal2, episode_rew2, ep2, o2 = q2.get(
+                            block=False, timeout=0.001)
+                except:
+                    pass
+
+                time.sleep(300)
+                print "SERVER FAIL"
+                reset_server()
+                print "RESET SERVER"
+
+                p1.terminate()
+                p2.terminate()
+                print "PROCESSES TERMINATED"
+
+                p1 = multiprocessing.Process(
+                    target=run_process, args=(maddpg, 0, q1, r1, fdbk1, start_ep))
+                p2 = multiprocessing.Process(
+                    target=run_process, args=(maddpg, 1, q2, r2, fdbk2, start_ep))
+
+                print "Started"
+
+                p1.start()
+                time.sleep(5)
+                p2.start()
+
+                continue
+
+                # At The End of each episode log stats and update target
             if (terminal1 != 0):
                 # Logging Stats
                 if len(maddpg.memory.memory) > batch_size:
@@ -467,7 +515,6 @@ def run():
             # training step every 10 steps
             if itr % 10 == 0:
                 c_loss, a_loss = maddpg.update_policy(prioritized=True)
-                print "LOSS", c_loss, a_loss
 
             maddpg.steps_done += 1
             itr += 1
