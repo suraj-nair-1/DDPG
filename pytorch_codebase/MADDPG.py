@@ -10,6 +10,7 @@ import numpy as np
 from params import scale_reward
 import time
 import os
+import time
 
 
 def soft_update(target, source, t):
@@ -131,7 +132,9 @@ class OMADDPG:
     def update_policy(self, prioritized=False):
         # do not train until exploration is enough
         # print 'update'
+        t0 = time.time()
         if self.episode_done <= self.episodes_before_train:
+            print "UPDATETIME", time.time() - t0
             return None, None
 
         ByteTensor = th.cuda.ByteTensor if self.use_cuda else th.ByteTensor
@@ -294,9 +297,11 @@ class OMADDPG:
                 a_loss.append(actor_loss)
 
         if self.steps_done % 100 == 0 and self.steps_done > 0:
-            for i in range(self.n_agents):
+            for i in range(len(self.actors)):
                 soft_update(self.critics_target[i], self.critics[i], self.tau)
                 soft_update(self.actors_target[i], self.actors[i], self.tau)
+
+        print "UPDATETIME", time.time() - t0
         # print c_loss, a_loss
         return c_loss, a_loss
 
