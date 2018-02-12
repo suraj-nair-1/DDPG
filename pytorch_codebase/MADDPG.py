@@ -167,41 +167,57 @@ class OMADDPG:
 
             # for current agent
             meta_state = state_batch[:, agent]
+            meta_state_1 = non_final_next_states[:, agent]
             meta_option = option_batch[:, agent]
             whole_state = state_batch.view(self.batch_size, -1)
             whole_action = action_batch.view(self.batch_size, -1)
             whole_option = option_batch.view(self.batch_size, -1)
 
             current_Q = self.meta_critic(meta_state, meta_option)
+            nextq = []
+            for o1 in range(self.n_options):
+                oo1 = Variable(
+                    th.zeros(len(current_Q), self.n_options).type(FloatTensor))
+                oo1[:, o1] = 1.0
+                nextq.append(self.meta_critic(non_final_next_states[
+                    :, agent, :], oo1.view(-1, self.n_options)))
 
-            directq = []
-            for item in range(len(option_batch)):
-                opt = option_batch[item, agent, :]
+            nextq = th.cat(nextq, dim=1)
+            nextq, _ = nextq.max(dim=1)
+            nextq = nextq * self.GAMMA
+            nextq = nextq * self.GAMMA + reward_batch[:, agent].squeeze(1)
 
-                opt = np.argmax(opt.cpu().data.numpy())
+            # next_q = self.meta_critic(meta_state_1, )
 
-                q1 = self.critics_target[opt](
-                    whole_state[item].unsqueeze(0), whole_action[item].unsqueeze(0))
+            # directq = []
+            # for item in range(len(option_batch)):
+            #     opt = option_batch[item, agent, :]
 
-                for o1 in range(self.n_options):
-                    oo1 = Variable(
-                        th.zeros(self.n_options).type(FloatTensor))
-                    oo1[o1] = 1.0
+            #     opt = np.argmax(opt.cpu().data.numpy())
 
-                    td1 = self.meta_critic(non_final_next_states[item, agent, :].unsqueeze(
-                        0), oo1.view(-1, self.n_options))
-                    try:
-                        if td1 > mx:
-                            mx = td1
-                    except:
-                        mx = td1
+            #     q1 = self.critics_target[opt](
+            # whole_state[item].unsqueeze(0), whole_action[item].unsqueeze(0))
 
-                directq.append((q1 + self.GAMMA * mx).view(-1))
+            #     for o1 in range(self.n_options):
+            #         oo1 = Variable(
+            #             th.zeros(self.n_options).type(FloatTensor))
+            #         oo1[o1] = 1.0
 
-            directq = th.stack(directq)
-            loss_Q = nn.MSELoss()(current_Q, directq.detach())
+            #         td1 = self.meta_critic(non_final_next_states[item, agent, :].unsqueeze(
+            #             0), oo1.view(-1, self.n_options))
+            #         try:
+            #             if td1 > mx:
+            #                 mx = td1
+            #         except:
+            #             mx = td1
+
+            #     directq.append((q1 + self.GAMMA * mx).view(-1))
+
+            # directq = th.stack(directq)
+            loss_Q = nn.MSELoss()(current_Q, nextq.detach())
             loss_Q.backward()
             self.meta_optimizer.step()
+            print "UPDATETIME META", time.time() - t0
 
             for opt in range(self.n_options):
                 transitions = self.memory.sample_option(
@@ -295,6 +311,7 @@ class OMADDPG:
                 self.actor_optimizer[agent * self.n_options + opt].step()
                 c_loss.append(loss_Q)
                 a_loss.append(actor_loss)
+            print "UPDATETIME POLICIES", time.time() - t0
 
         if self.steps_done % 100 == 0 and self.steps_done > 0:
             for i in range(len(self.actors)):
