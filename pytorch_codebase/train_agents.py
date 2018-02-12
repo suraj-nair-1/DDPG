@@ -19,8 +19,8 @@ import copy
 import traceback
 import subprocess
 
-LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
-# LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
+# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 # LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
 # LOGPATH = "/home/anshul/Desktop/"
 
@@ -42,7 +42,7 @@ GAMMA = 0.99
 # Soft target update param
 TAU = 0.001
 
-EPS_ITERATIONS_ANNEAL = 200000
+EPS_ITERATIONS_ANNEAL = 300000
 
 # Noise for exploration
 EPS_GREEDY_INIT = 1.0
@@ -51,7 +51,7 @@ EPS_GREEDY_INIT = 1.0
 # Size of replay buffer
 capacity = 1000000
 batch_size = 256
-eps_before_train = 50
+eps_before_train = 5
 
 GPUENABLED = False
 ORACLE = False
@@ -346,6 +346,8 @@ def run():
         "ep_closs", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
     dset_aloss = stats_grp.create_dataset(
         "ep_aloss", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
+    dset_options = stats_grp.create_dataset(
+        "ep_options", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
     dset_numdone = stats_grp.create_dataset("ep_numdone", data=np.array([-1]))
     f.swmr_mode = True  # NECESSARY FOR SIMULTANEOUS READ/WRITE
 
@@ -381,6 +383,11 @@ def run():
         maddpg.to_gpu()
 
     try:
+        p1optcounts = {}
+        p2optcounts = {}
+        for opt in range(N_OPTIONS):
+            p1optcounts[opt] = 0
+            p2optcounts[opt] = 0
 
         while True:
             # State_t, Action, State_t+1, transition reward, terminal, episodre
@@ -388,12 +395,17 @@ def run():
             p1_sts, p1_acts, p1_sts1, p1_rws, terminal1, episode_rew1, ep1, o1 = q1.get()
             p2_sts, p2_acts, p2_sts1, p2_rws, terminal2, episode_rew2, ep2, o2 = q2.get()
 
-            print terminal1, terminal2
-
             ep1, step1 = ep1
             ep2, step2 = ep2
 
-            assert((ep1 == ep2) and (step1 == step2))
+            p1optcounts[o1] += 1
+            p2optcounts[o2] += 1
+
+            if not ((ep1 == ep2) and (step1 == step2)):
+                p1.terminate()
+                p2.terminate()
+
+            print "MAIN LOOP", maddpg.episode_done
 
             maddpg.episode_done = ep1
             start_ep = ep1
@@ -470,6 +482,13 @@ def run():
                     dset_kick[:, maddpg.episode_done] = all_logstats[:, 3]
                     dset_good[:, maddpg.episode_done] = all_logstats[:, 4]
                     dset_bad[:, maddpg.episode_done] = all_logstats[:, 5]
+                    for j1 in range(N_OPTIONS):
+                        dset_options[j1, maddpg.episode_done] = p1optcounts[j1]
+                        dset_options[N_OPTIONS + j1,
+                                     maddpg.episode_done] = p2optcounts[j1]
+                    for opt in range(N_OPTIONS):
+                        p1optcounts[opt] = 0
+                        p2optcounts[opt] = 0
 
                     dset_move.flush()
                     dset_turn.flush()
@@ -477,9 +496,11 @@ def run():
                     dset_kick.flush()
                     dset_good.flush()
                     dset_bad.flush()
+                    dset_options.flush()
 
                 dset_rewards[:, maddpg.episode_done] = np.array(
                     [episode_rew1, episode_rew2]).reshape((1, 2))
+                dset_options
                 dset_rewards.flush()
                 c_loss, a_loss = maddpg.update_policy(prioritized=True)
                 if c_loss is not None:
