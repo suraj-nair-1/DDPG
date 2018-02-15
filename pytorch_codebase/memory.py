@@ -8,8 +8,8 @@ class ReplayMemory:
     def __init__(self, capacity, option=False):
         self.capacity = capacity
         self.memory = []
-        self.sorted_memory = []
         self.position = 0
+        self.option = option
 
         if not option:
             self.Experience = namedtuple('Experience',
@@ -17,11 +17,26 @@ class ReplayMemory:
         else:
             self.Experience = namedtuple('Experience',
                                          ('states', 'actions', 'next_states', 'rewards', 'option'))
+            self.option_mem = {0: {}, 1: {}}
 
     def push(self, *args):
         if len(self.memory) < self.capacity:
             self.memory.append(None)
-        self.memory[self.position] = self.Experience(*args)
+        item = self.Experience(*args)
+        self.memory[self.position] = item
+
+        if self.option:
+            for player in range(2):
+                p_opt = int(np.argmax(item.option[player].cpu().numpy()))
+                if self.option_mem[player].has_key(p_opt):
+                    self.option_mem[player][p_opt].append(item)
+                else:
+                    self.option_mem[player][p_opt] = [item]
+
+                if len(self.option_mem[player][p_opt]) > self.capacity:
+                    self.option_mem[player][p_opt] = self.option_mem[
+                        player][p_opt][-self.capacity:]
+
         self.position = (self.position + 1) % self.capacity
 
         if self.position % 1000 == 0:
@@ -39,8 +54,7 @@ class ReplayMemory:
         return random.sample(self.memory, batch_size)
 
     def sample_option(self, batch_size, player,  option, prioritized=False):
-        new_mem = [s for s in self.memory if int(
-            np.argmax(s.option[player].cpu().numpy())) == option]
+        new_mem = self.option_mem[player][option]
         if prioritized:
             batch1 = random.sample(
                 new_mem[:(self.capacity / 10)], batch_size / 4)
