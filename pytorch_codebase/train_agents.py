@@ -68,7 +68,7 @@ server_launch_command = "./bin/HFO --headless --frames-per-trial=500 --untouched
 def reset_server():
     subprocess.call('kill -9 $(lsof -t -i:' + str(PORT) + ')', shell=True)
     subprocess.Popen(server_launch_command, shell=True)
-    time.sleep(5)
+    time.sleep(30)
 
 
 def connect():
@@ -461,7 +461,7 @@ def run():
                 print "Started"
 
                 p1.start()
-                time.sleep(5)
+                time.sleep(30)
                 p2.start()
 
                 continue
