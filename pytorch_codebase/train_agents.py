@@ -19,8 +19,8 @@ import copy
 import traceback
 import subprocess
 
-# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
-LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
+LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+#LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 # LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
 # LOGPATH = "/home/anshul/Desktop/"
 
@@ -50,8 +50,8 @@ EPS_GREEDY_INIT = 1.0
 
 # Size of replay buffer
 capacity = 1000000
-batch_size = 256
-eps_before_train = 5
+batch_size = 1024
+eps_before_train = 50
 
 GPUENABLED = False
 ORACLE = False
@@ -66,7 +66,8 @@ server_launch_command = "./bin/HFO --headless --frames-per-trial=500 --untouched
 
 
 def reset_server():
-    subprocess.call('kill -9 $(lsof -t -i:' + str(PORT) + ')', shell=True)
+    subprocess.call('killall -9 rcssserver', shell=True)
+    time.sleep(60)
     subprocess.Popen(server_launch_command, shell=True)
     time.sleep(30)
 
@@ -160,7 +161,7 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue, st
     else:
         np.random.seed(SEED * 2)
 
-    ITERATIONS = startep * 500
+    ITERATIONS = startep * 500.0
     NUM_GOALS = 0.0
     for ep in xrange(startep, MAX_EPISODES):
         ep_reward = 0.0
@@ -444,14 +445,14 @@ def run():
                 except:
                     pass
 
+                p1.terminate()
+                p2.terminate()
+                print "PROCESSES TERMINATED"
+
                 time.sleep(300)
                 print "SERVER FAIL"
                 reset_server()
                 print "RESET SERVER"
-
-                p1.terminate()
-                p2.terminate()
-                print "PROCESSES TERMINATED"
 
                 p1 = multiprocessing.Process(
                     target=run_process, args=(maddpg, 0, q1, r1, fdbk1, start_ep))
