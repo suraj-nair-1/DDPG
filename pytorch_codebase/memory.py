@@ -42,6 +42,9 @@ class ReplayMemory:
         if self.position % 1000 == 0:
             self.memory = sorted(
                 self.memory, key=lambda row: (row.rewards).mean())
+            for p in range(2):
+                for key in self.option_mem[p].keys():
+                    self.option_mem[p][key] = sorted(self.option_mem[p][key], key=lambda row: (row.rewards).mean())
 
     def sample(self, batch_size, prioritized=False):
         if prioritized:
