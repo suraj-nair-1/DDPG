@@ -3,11 +3,11 @@ import itertools
 from hfo import *
 
 import numpy as np
-import tensorflow as tf
 import threading
 import torch
 from torch.autograd import Variable
-from multiprocessing import Pool, Lock
+import multiprocessing
+multiprocessing.set_start_method('spawn')
 from memory import ReplayMemory
 import multiprocessing
 from MADDPG import MADDPG, OMADDPG
@@ -18,6 +18,8 @@ import h5py
 import copy
 import traceback
 import subprocess
+from pympler import asizeof
+import gc
 
 LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 #LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
@@ -163,7 +165,7 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue, st
 
     ITERATIONS = startep * 500.0
     NUM_GOALS = 0.0
-    for ep in xrange(startep, MAX_EPISODES):
+    for ep in range(startep, MAX_EPISODES):
         ep_reward = 0.0
         ep_ave_max_q = 0.0
 
@@ -184,7 +186,7 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue, st
         old_ball_proxs = np.zeros((1,))
         old_goal_dists = np.zeros((1,))
         old_kickables = np.zeros((1,))
-        for j in xrange(MAX_EP_STEPS):
+        for j in range(MAX_EP_STEPS):
             # # Grab the state features from the environment
             states = states1
             try:
@@ -232,7 +234,7 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue, st
             # EPISODE IS OVER
             ###########################################################
             if terminal:
-                print terminal
+                print(terminal)
                 assert terminal != 5
                 print('| Reward: ', rr, " | Episode", ep)
                 break
@@ -373,7 +375,7 @@ def run():
     p2 = multiprocessing.Process(
         target=run_process, args=(maddpg, 1, q2, r2, fdbk2, start_ep))
 
-    print "Started"
+    print("Started")
 
     p1.start()
     time.sleep(5)
@@ -406,7 +408,14 @@ def run():
                 p1.terminate()
                 p2.terminate()
 
-            print "MAIN LOOP", maddpg.episode_done
+            print("MAIN LOOP", maddpg.episode_done, sys.getsizeof(maddpg.memory.memory))
+            if maddpg.episode_done > 2:
+                print(sys.getsizeof(maddpg.memory.option_mem[0][0]))
+                print(sys.getsizeof(maddpg.memory.option_mem[0][1]))
+                print(sys.getsizeof(maddpg.memory.option_mem[1][0]))
+                print(sys.getsizeof(maddpg.memory.option_mem[1][1]))
+
+
 
             maddpg.episode_done = ep1
             start_ep = ep1
@@ -447,19 +456,19 @@ def run():
 
                 p1.terminate()
                 p2.terminate()
-                print "PROCESSES TERMINATED"
+                print("PROCESSES TERMINATED")
 
                 time.sleep(300)
-                print "SERVER FAIL"
+                print("SERVER FAIL")
                 reset_server()
-                print "RESET SERVER"
+                print("RESET SERVER")
 
                 p1 = multiprocessing.Process(
                     target=run_process, args=(maddpg, 0, q1, r1, fdbk1, start_ep))
                 p2 = multiprocessing.Process(
                     target=run_process, args=(maddpg, 1, q2, r2, fdbk2, start_ep))
 
-                print "Started"
+                print("Started")
 
                 p1.start()
                 time.sleep(30)
@@ -530,6 +539,13 @@ def run():
                 copy_maddpg.memory = None
                 r1.put(copy_maddpg)
                 r2.put(copy_maddpg)
+                gc.collect()
+                memls = []
+                rn = locals()
+                l = None
+                for l in rn.keys():
+                    memls.append((l, asizeof.asizeof(rn[l])))
+                print(memls, "MAIN")
 
             fdbk1.put(0)
             fdbk2.put(0)
@@ -540,7 +556,7 @@ def run():
 
             maddpg.steps_done += 1
             itr += 1
-    except Exception, e:
+    except Exception as e:
         # subprocess.call('killall -9 rcssserver', shell=True)
         r1.put(None)
         r2.put(None)

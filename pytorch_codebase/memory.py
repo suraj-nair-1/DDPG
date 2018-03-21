@@ -28,7 +28,7 @@ class ReplayMemory:
         if self.option:
             for player in range(2):
                 p_opt = int(np.argmax(item.option[player].cpu().numpy()))
-                if self.option_mem[player].has_key(p_opt):
+                if p_opt in self.option_mem[player]:
                     self.option_mem[player][p_opt].append(item)
                 else:
                     self.option_mem[player][p_opt] = [item]

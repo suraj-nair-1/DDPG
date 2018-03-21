@@ -134,7 +134,7 @@ class OMADDPG:
         # print 'update'
         t0 = time.time()
         if self.episode_done <= self.episodes_before_train:
-            print "UPDATETIME", time.time() - t0
+            print("UPDATETIME", time.time() - t0)
             return None, None
 
         ByteTensor = th.cuda.ByteTensor if self.use_cuda else th.ByteTensor
@@ -217,7 +217,7 @@ class OMADDPG:
             loss_Q = nn.MSELoss()(current_Q, nextq.detach())
             loss_Q.backward()
             self.meta_optimizer.step()
-            print "UPDATETIME META", time.time() - t0
+            print("UPDATETIME META", time.time() - t0)
 
             for opt in range(self.n_options):
                 transitions = self.memory.sample_option(
@@ -311,14 +311,14 @@ class OMADDPG:
                 self.actor_optimizer[agent * self.n_options + opt].step()
                 c_loss.append(loss_Q)
                 a_loss.append(actor_loss)
-            print "UPDATETIME POLICIES", time.time() - t0
+            print("UPDATETIME POLICIES", time.time() - t0)
 
         if self.steps_done % 100 == 0 and self.steps_done > 0:
             for i in range(len(self.actors)):
                 soft_update(self.critics_target[i], self.critics[i], self.tau)
                 soft_update(self.actors_target[i], self.actors[i], self.tau)
 
-        print "UPDATETIME", time.time() - t0
+        print("UPDATETIME", time.time() - t0)
         # print c_loss, a_loss
         return c_loss, a_loss
 
@@ -468,7 +468,7 @@ class MADDPG:
         c_loss = []
         a_loss = []
         for agent in range(self.n_agents):
-            print time.time(), "A", agent
+            print(time.time(), "A", agent)
             transitions = self.memory.sample(
                 self.batch_size, prioritized=prioritized)
             batch = self.memory.Experience(*zip(*transitions))
@@ -478,7 +478,7 @@ class MADDPG:
             state_batch = Variable(th.stack(batch.states).type(FloatTensor))
             action_batch = Variable(th.stack(batch.actions).type(FloatTensor))
             reward_batch = Variable(th.stack(batch.rewards).type(FloatTensor))
-            print time.time(), "B", agent
+            print(time.time(), "B", agent)
             # : (batch_size_non_final) x n_agents x dim_obs
             non_final_next_states = Variable(th.stack(
                 [s for s in batch.next_states
