@@ -1,13 +1,13 @@
 import sys
 import itertools
 from hfo import *
+from collections import namedtuple
 
 import numpy as np
 import threading
 import torch
 from torch.autograd import Variable
 import multiprocessing
-multiprocessing.set_start_method('spawn')
 from memory import ReplayMemory
 import multiprocessing
 from MADDPG import MADDPG, OMADDPG
@@ -21,8 +21,12 @@ import subprocess
 from pympler import asizeof
 import gc
 
-LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
-#LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
+
+Experience = namedtuple(
+    'Experience', ('states', 'actions', 'next_states', 'rewards', 'option'))
+
+# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 # LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
 # LOGPATH = "/home/anshul/Desktop/"
 
@@ -252,7 +256,7 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue, st
 
 def extra_stats(maddpg, player_num, opt):
     transitions = maddpg.memory.sample(batch_size)
-    batch = maddpg.memory.Experience(*zip(*transitions))
+    batch = Experience(*zip(*transitions))
     s_batch = Variable(th.stack(batch.states))
     action_batch = Variable(th.stack(batch.actions))
 
@@ -322,6 +326,7 @@ def extra_stats(maddpg, player_num, opt):
 
 
 def run():
+    sp = multiprocessing.get_context("spawn")
     n_agents = 2
     n_states = 77
     n_actions = 10
@@ -354,12 +359,12 @@ def run():
     dset_numdone = stats_grp.create_dataset("ep_numdone", data=np.array([-1]))
     f.swmr_mode = True  # NECESSARY FOR SIMULTANEOUS READ/WRITE
 
-    q1 = multiprocessing.Queue()
-    q2 = multiprocessing.Queue()
-    r1 = multiprocessing.Queue()
-    r2 = multiprocessing.Queue()
-    fdbk1 = multiprocessing.Queue()
-    fdbk2 = multiprocessing.Queue()
+    q1 = sp.Queue()
+    q2 = sp.Queue()
+    r1 = sp.Queue()
+    r2 = sp.Queue()
+    fdbk1 = sp.Queue()
+    fdbk2 = sp.Queue()
 
     nopts = 2
 
@@ -408,14 +413,13 @@ def run():
                 p1.terminate()
                 p2.terminate()
 
-            print("MAIN LOOP", maddpg.episode_done, sys.getsizeof(maddpg.memory.memory))
+            print("MAIN LOOP", maddpg.episode_done,
+                  sys.getsizeof(maddpg.memory.memory))
             if maddpg.episode_done > 2:
                 print(sys.getsizeof(maddpg.memory.option_mem[0][0]))
                 print(sys.getsizeof(maddpg.memory.option_mem[0][1]))
                 print(sys.getsizeof(maddpg.memory.option_mem[1][0]))
                 print(sys.getsizeof(maddpg.memory.option_mem[1][1]))
-
-
 
             maddpg.episode_done = ep1
             start_ep = ep1
@@ -463,9 +467,9 @@ def run():
                 reset_server()
                 print("RESET SERVER")
 
-                p1 = multiprocessing.Process(
+                p1 = sp.Process(
                     target=run_process, args=(maddpg, 0, q1, r1, fdbk1, start_ep))
-                p2 = multiprocessing.Process(
+                p2 = sp.Process(
                     target=run_process, args=(maddpg, 1, q2, r2, fdbk2, start_ep))
 
                 print("Started")

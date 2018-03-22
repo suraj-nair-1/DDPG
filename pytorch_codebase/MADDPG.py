@@ -10,7 +10,11 @@ import numpy as np
 from params import scale_reward
 import time
 import os
+from collections import namedtuple
 import time
+
+Experience = namedtuple(
+    'Experience', ('states', 'actions', 'next_states', 'rewards', 'option'))
 
 
 def soft_update(target, source, t):
@@ -145,7 +149,7 @@ class OMADDPG:
         for agent in range(self.n_agents):
             transitions = self.memory.sample(
                 self.batch_size, prioritized=prioritized)
-            batch = self.memory.Experience(*zip(*transitions))
+            batch = Experience(*zip(*transitions))
             non_final_mask = ByteTensor(list(map(lambda s: s is not None,
                                                  batch.next_states)))
             # state_batch: batch_size x n_agents x dim_obs
@@ -222,7 +226,7 @@ class OMADDPG:
             for opt in range(self.n_options):
                 transitions = self.memory.sample_option(
                     self.batch_size, agent, opt, prioritized=prioritized)
-                batch = self.memory.Experience(*zip(*transitions))
+                batch = Experience(*zip(*transitions))
                 non_final_mask = ByteTensor(list(map(lambda s: s is not None,
                                                      batch.next_states)))
                 # state_batch: batch_size x n_agents x dim_obs
