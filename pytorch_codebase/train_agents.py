@@ -25,8 +25,8 @@ import gc
 Experience = namedtuple(
     'Experience', ('states', 'actions', 'next_states', 'rewards', 'option'))
 
-# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
-LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
+LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+#LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 # LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
 # LOGPATH = "/home/anshul/Desktop/"
 
@@ -57,7 +57,7 @@ EPS_GREEDY_INIT = 1.0
 # Size of replay buffer
 capacity = 1000000
 batch_size = 1024
-eps_before_train = 50
+eps_before_train = 10
 
 GPUENABLED = False
 ORACLE = False
@@ -239,7 +239,6 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue, st
             ###########################################################
             if terminal:
                 print(terminal)
-                assert terminal != 5
                 print('| Reward: ', rr, " | Episode", ep)
                 break
 
@@ -252,6 +251,11 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue, st
                 new = feedback_queue.get(timeout=1.5)
             except:
                 pass
+
+        if terminal == 5:
+            print("SLEEPING UNTIL KILLED")
+            time.sleep(3600)
+            break 
 
 
 def extra_stats(maddpg, player_num, opt):
@@ -364,7 +368,7 @@ def run():
     r1 = sp.Queue()
     r2 = sp.Queue()
     fdbk1 = sp.Queue()
-    fdbk2 = sp.Queue()
+    fdbk2 = sp.Queue()  
 
     nopts = 2
 
@@ -375,9 +379,9 @@ def run():
         maddpg = MADDPG(n_agents, n_states, n_actions,
                         batch_size, capacity, eps_before_train)
 
-    p1 = multiprocessing.Process(
+    p1 = sp.Process(
         target=run_process, args=(maddpg, 0, q1, r1, fdbk1, start_ep))
-    p2 = multiprocessing.Process(
+    p2 = sp.Process( 
         target=run_process, args=(maddpg, 1, q2, r2, fdbk2, start_ep))
 
     print("Started")
@@ -459,7 +463,7 @@ def run():
                     pass
 
                 p1.terminate()
-                p2.terminate()
+                p2.terminate() 
                 print("PROCESSES TERMINATED")
 
                 time.sleep(300)
@@ -467,10 +471,16 @@ def run():
                 reset_server()
                 print("RESET SERVER")
 
-                p1 = sp.Process(
-                    target=run_process, args=(maddpg, 0, q1, r1, fdbk1, start_ep))
+                copy_maddpg = copy.deepcopy(maddpg)
+                copy_maddpg.to_cpu()
+                # copy_maddpg.memory.memory = []
+                # copy_maddpg.memory.position = 0
+                copy_maddpg.memory = None 
+
+                p1 = sp.Process( 
+                    target=run_process, args=(copy_maddpg, 0, q1, r1, fdbk1, start_ep))
                 p2 = sp.Process(
-                    target=run_process, args=(maddpg, 1, q2, r2, fdbk2, start_ep))
+                    target=run_process, args=(copy_maddpg, 1, q2, r2, fdbk2, start_ep))
 
                 print("Started")
 
