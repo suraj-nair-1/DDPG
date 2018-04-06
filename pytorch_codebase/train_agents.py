@@ -8,7 +8,7 @@ import threading
 import torch
 from torch.autograd import Variable
 import multiprocessing
-from memory import ReplayMemory
+from memory import ReplayMemory, Experience, ExperienceOptions
 import multiprocessing
 from MADDPG import MADDPG, OMADDPG
 import numpy as np
@@ -22,13 +22,10 @@ from pympler import asizeof
 import gc
 
 
-Experience = namedtuple(
-    'Experience', ('states', 'actions', 'next_states', 'rewards', 'option'))
-
-LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+#LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 #LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 # LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
-# LOGPATH = "/home/anshul/Desktop/"
+LOGPATH = "/home/anshul/Desktop/"
 
 LOGNUM = int(sys.argv[2])
 OPTIONS = int(sys.argv[3])
@@ -97,7 +94,8 @@ def take_action_and_step(a, o, env, eps):
         a[8] = np.random.uniform(0, 100)
         a[9] = np.random.uniform(-180, 180)
 
-        o = np.random.randint(0, 2)
+        if OPTIONS:
+            o = np.random.randint(0, 2)
 
     index = np.argmax(a[:4])
     if index == 0:
@@ -112,7 +110,10 @@ def take_action_and_step(a, o, env, eps):
     env.act(*action)
     terminal = env.step()
     s1 = env.getState()
-    return s1, terminal, th.FloatTensor(a), o
+    if OPTIONS:
+        return s1, terminal, th.FloatTensor(a), o
+    else:
+        return s1, terminal, th.FloatTensor(a)
 
 
 def get_curr_state_vars(s1):
@@ -198,11 +199,18 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue, st
             except:
                 states = states.float()
             states = Variable(states).type(FloatTensor)
-            actions, o = maddpg.select_action(states, player_num)
+            if OPTIONS:
+                actions, o = maddpg.select_action(states, player_num)
+            else:
+                actions = maddpg.select_action(states, player_num)
             actions = actions.data
 
-            states1, terminal, actions, o = take_action_and_step(
-                actions.numpy(), o, env, max(0.1, 1 - ITERATIONS / EPS_ITERATIONS_ANNEAL))
+            if OPTIONS:
+                states1, terminal, actions, o = take_action_and_step(
+                    actions.numpy(), o, env, max(0.1, 1 - ITERATIONS / EPS_ITERATIONS_ANNEAL))
+            else:
+                states1, terminal, actions = take_action_and_step(
+                    actions.numpy(), -1, env, max(0.1, 1 - ITERATIONS / EPS_ITERATIONS_ANNEAL))
 
             curr_ball_proxs, curr_goal_dists, curr_kickables = get_curr_state_vars(
                 states1)
@@ -229,8 +237,12 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue, st
             # player_queue.put((states.data, actions, states1, action_rewards,
             # terminal, rr, ep))
 
-            player_queue.put((states.data, actions, states1,
-                              action_rewards, terminal, rr, (ep, j), o))
+            if OPTIONS:
+                player_queue.put((states.data, actions, states1,
+                                  action_rewards, terminal, rr, (ep, j), o))
+            else:
+                player_queue.put((states.data, actions, states1,
+                                  action_rewards, terminal, rr, (ep, j)))
             states = states1
 
             ITERATIONS += 1
@@ -255,12 +267,15 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue, st
         if terminal == 5:
             print("SLEEPING UNTIL KILLED")
             time.sleep(3600)
-            break 
+            break
 
 
-def extra_stats(maddpg, player_num, opt):
+def extra_stats(maddpg, player_num, opt=0):
     transitions = maddpg.memory.sample(batch_size)
-    batch = Experience(*zip(*transitions))
+    if OPTIONS:
+        batch = ExperienceOptions(*zip(*transitions))
+    else:
+        batch = Experience(*zip(*transitions))
     s_batch = Variable(th.stack(batch.states))
     action_batch = Variable(th.stack(batch.actions))
 
@@ -305,17 +320,30 @@ def extra_stats(maddpg, player_num, opt):
     good_batch = good_batch.view(batch_size, -1)
     bad_batch = bad_batch.view(batch_size, -1)
 
-    target_move = maddpg.critic_predict(
-        whole_state, move_batch, player_num, opt)
-    target_turn = maddpg.critic_predict(
-        whole_state, turn_batch, player_num, opt)
-    target_tackle = maddpg.critic_predict(
-        whole_state, tackle_batch, player_num, opt)
-    target_kick = maddpg.critic_predict(
-        whole_state, kick_batch, player_num, opt)
-    target_good = maddpg.critic_predict(
-        whole_state, good_batch, player_num, opt)
-    target_bad = maddpg.critic_predict(whole_state, bad_batch, player_num, opt)
+    if OPTIONS:
+        target_move = maddpg.critic_predict(
+            whole_state, move_batch, player_num, opt)
+        target_turn = maddpg.critic_predict(
+            whole_state, turn_batch, player_num, opt)
+        target_tackle = maddpg.critic_predict(
+            whole_state, tackle_batch, player_num, opt)
+        target_kick = maddpg.critic_predict(
+            whole_state, kick_batch, player_num, opt)
+        target_good = maddpg.critic_predict(
+            whole_state, good_batch, player_num, opt)
+        target_bad = maddpg.critic_predict(whole_state, bad_batch, player_num, opt)
+    else:
+        target_move = maddpg.critic_predict(
+            whole_state, move_batch, player_num)
+        target_turn = maddpg.critic_predict(
+            whole_state, turn_batch, player_num)
+        target_tackle = maddpg.critic_predict(
+            whole_state, tackle_batch, player_num)
+        target_kick = maddpg.critic_predict(
+            whole_state, kick_batch, player_num)
+        target_good = maddpg.critic_predict(
+            whole_state, good_batch, player_num)
+        target_bad = maddpg.critic_predict(whole_state, bad_batch, player_num)
 
     ep_move_q = target_move.mean().data.cpu().numpy()[0]
     ep_turn_q = target_turn.mean().data.cpu().numpy()[0]
@@ -340,26 +368,31 @@ def run():
     f = h5py.File(LOGPATH + 'logging/logs' + str(lg) +
                   '.txt', "w", libver='latest')
     stats_grp = f.create_group("statistics")
+    if OPTIONS:
+        dset_scaling_factor = N_OPTIONS
+    else:
+        dset_scaling_factor = 1
     dset_move = stats_grp.create_dataset(
-        "ep_move_q", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
+        "ep_move_q", (n_agents * dset_scaling_factor, MAX_EPISODES), dtype='f')
     dset_turn = stats_grp.create_dataset(
-        "ep_turn_q", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
+        "ep_turn_q", (n_agents * dset_scaling_factor, MAX_EPISODES), dtype='f')
     dset_tackle = stats_grp.create_dataset(
-        "ep_tackle_q", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
+        "ep_tackle_q", (n_agents * dset_scaling_factor, MAX_EPISODES), dtype='f')
     dset_kick = stats_grp.create_dataset(
-        "ep_kick_q", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
+        "ep_kick_q", (n_agents * dset_scaling_factor, MAX_EPISODES), dtype='f')
     dset_good = stats_grp.create_dataset(
-        "ep_good_q", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
+        "ep_good_q", (n_agents * dset_scaling_factor, MAX_EPISODES), dtype='f')
     dset_bad = stats_grp.create_dataset(
-        "ep_bad_q", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
+        "ep_bad_q", (n_agents * dset_scaling_factor, MAX_EPISODES), dtype='f')
     dset_rewards = stats_grp.create_dataset(
         "ep_reward", (n_agents, MAX_EPISODES), dtype='f')
     dset_closs = stats_grp.create_dataset(
-        "ep_closs", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
+        "ep_closs", (n_agents * dset_scaling_factor, MAX_EPISODES), dtype='f')
     dset_aloss = stats_grp.create_dataset(
-        "ep_aloss", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
-    dset_options = stats_grp.create_dataset(
-        "ep_options", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
+        "ep_aloss", (n_agents * dset_scaling_factor, MAX_EPISODES), dtype='f')
+    if OPTIONS:
+        dset_options = stats_grp.create_dataset(
+            "ep_options", (n_agents * dset_scaling_factor, MAX_EPISODES), dtype='f')
     dset_numdone = stats_grp.create_dataset("ep_numdone", data=np.array([-1]))
     f.swmr_mode = True  # NECESSARY FOR SIMULTANEOUS READ/WRITE
 
@@ -368,7 +401,7 @@ def run():
     r1 = sp.Queue()
     r2 = sp.Queue()
     fdbk1 = sp.Queue()
-    fdbk2 = sp.Queue()  
+    fdbk2 = sp.Queue()
 
     nopts = 2
 
@@ -381,7 +414,7 @@ def run():
 
     p1 = sp.Process(
         target=run_process, args=(maddpg, 0, q1, r1, fdbk1, start_ep))
-    p2 = sp.Process( 
+    p2 = sp.Process(
         target=run_process, args=(maddpg, 1, q2, r2, fdbk2, start_ep))
 
     print("Started")
@@ -395,23 +428,29 @@ def run():
         maddpg.to_gpu()
 
     try:
-        p1optcounts = {}
-        p2optcounts = {}
-        for opt in range(N_OPTIONS):
-            p1optcounts[opt] = 0
-            p2optcounts[opt] = 0
+        if OPTIONS:
+            p1optcounts = {}
+            p2optcounts = {}
+            for opt in range(N_OPTIONS):
+                p1optcounts[opt] = 0
+                p2optcounts[opt] = 0
 
         while True:
             # State_t, Action, State_t+1, transition reward, terminal, episodre
             # reward, episode #
-            p1_sts, p1_acts, p1_sts1, p1_rws, terminal1, episode_rew1, ep1, o1 = q1.get()
-            p2_sts, p2_acts, p2_sts1, p2_rws, terminal2, episode_rew2, ep2, o2 = q2.get()
+            if OPTIONS:
+                p1_sts, p1_acts, p1_sts1, p1_rws, terminal1, episode_rew1, ep1, o1 = q1.get()
+                p2_sts, p2_acts, p2_sts1, p2_rws, terminal2, episode_rew2, ep2, o2 = q2.get()
+            else:
+                p1_sts, p1_acts, p1_sts1, p1_rws, terminal1, episode_rew1, ep1 = q1.get()
+                p2_sts, p2_acts, p2_sts1, p2_rws, terminal2, episode_rew2, ep2 = q2.get()
 
             ep1, step1 = ep1
             ep2, step2 = ep2
 
-            p1optcounts[o1] += 1
-            p2optcounts[o2] += 1
+            if OPTIONS:
+                p1optcounts[o1] += 1
+                p2optcounts[o2] += 1
 
             if not ((ep1 == ep2) and (step1 == step2)):
                 p1.terminate()
@@ -419,7 +458,7 @@ def run():
 
             print("MAIN LOOP", maddpg.episode_done,
                   sys.getsizeof(maddpg.memory.memory))
-            if maddpg.episode_done > 2:
+            if OPTIONS and maddpg.episode_done > 2:
                 print(sys.getsizeof(maddpg.memory.option_mem[0][0]))
                 print(sys.getsizeof(maddpg.memory.option_mem[0][1]))
                 print(sys.getsizeof(maddpg.memory.option_mem[1][0]))
@@ -451,19 +490,27 @@ def run():
             if (terminal1 == 5) or (terminal2 == 5):
                 try:
                     while True:
-                        p1_sts, p1_acts, p1_sts1, p1_rws, terminal1, episode_rew1, ep1, o1 = q1.get(
-                            block=False, timeout=0.001)
+                        if OPTIONS:
+                            p1_sts, p1_acts, p1_sts1, p1_rws, terminal1, episode_rew1, ep1, o1 = q1.get(
+                                block=False, timeout=0.001)
+                        else:
+                            p1_sts, p1_acts, p1_sts1, p1_rws, terminal1, episode_rew1, ep1 = q1.get(
+                                block=False, timeout=0.001)
                 except:
                     pass
                 try:
                     while True:
-                        p2_sts, p2_acts, p2_sts1, p2_rws, terminal2, episode_rew2, ep2, o2 = q2.get(
-                            block=False, timeout=0.001)
+                        if OPTIONS:
+                            p2_sts, p2_acts, p2_sts1, p2_rws, terminal2, episode_rew2, ep2, o2 = q2.get(
+                                block=False, timeout=0.001)
+                        else:
+                            p2_sts, p2_acts, p2_sts1, p2_rws, terminal2, episode_rew2, ep2 = q2.get(
+                                block=False, timeout=0.001)
                 except:
                     pass
 
                 p1.terminate()
-                p2.terminate() 
+                p2.terminate()
                 print("PROCESSES TERMINATED")
 
                 time.sleep(300)
@@ -475,9 +522,9 @@ def run():
                 copy_maddpg.to_cpu()
                 # copy_maddpg.memory.memory = []
                 # copy_maddpg.memory.position = 0
-                copy_maddpg.memory = None 
+                copy_maddpg.memory = None
 
-                p1 = sp.Process( 
+                p1 = sp.Process(
                     target=run_process, args=(copy_maddpg, 0, q1, r1, fdbk1, start_ep))
                 p2 = sp.Process(
                     target=run_process, args=(copy_maddpg, 1, q2, r2, fdbk2, start_ep))
@@ -494,11 +541,16 @@ def run():
             if (terminal1 != 0):
                 # Logging Stats
                 if len(maddpg.memory.memory) > batch_size:
-                    all_logstats = []
-                    for p in range(n_agents):
-                        for opt in range(N_OPTIONS):
-                            all_logstats.append(extra_stats(maddpg, p, opt))
-                    all_logstats = np.stack(all_logstats)
+                    if OPTIONS:
+                        all_logstats = []
+                        for p in range(n_agents):
+                            for opt in range(N_OPTIONS):
+                                all_logstats.append(extra_stats(maddpg, p, opt))
+                        all_logstats = np.stack(all_logstats)
+                    else:
+                        p1_logstats = extra_stats(maddpg, 0)
+                        p2_logstats = extra_stats(maddpg, 1)
+                        all_logstats = np.stack([p1_logstats, p2_logstats])
 
                     dset_move[:, maddpg.episode_done] = all_logstats[:, 0]
                     dset_turn[:, maddpg.episode_done] = all_logstats[:, 1]
@@ -506,13 +558,15 @@ def run():
                     dset_kick[:, maddpg.episode_done] = all_logstats[:, 3]
                     dset_good[:, maddpg.episode_done] = all_logstats[:, 4]
                     dset_bad[:, maddpg.episode_done] = all_logstats[:, 5]
-                    for j1 in range(N_OPTIONS):
-                        dset_options[j1, maddpg.episode_done] = p1optcounts[j1]
-                        dset_options[N_OPTIONS + j1,
-                                     maddpg.episode_done] = p2optcounts[j1]
-                    for opt in range(N_OPTIONS):
-                        p1optcounts[opt] = 0
-                        p2optcounts[opt] = 0
+
+                    if OPTIONS:
+                        for j1 in range(N_OPTIONS):
+                            dset_options[j1, maddpg.episode_done] = p1optcounts[j1]
+                            dset_options[N_OPTIONS + j1,
+                                         maddpg.episode_done] = p2optcounts[j1]
+                        for opt in range(N_OPTIONS):
+                            p1optcounts[opt] = 0
+                            p2optcounts[opt] = 0
 
                     dset_move.flush()
                     dset_turn.flush()
@@ -520,22 +574,26 @@ def run():
                     dset_kick.flush()
                     dset_good.flush()
                     dset_bad.flush()
-                    dset_options.flush()
+                    if OPTIONS:
+                        dset_options.flush()
 
                 dset_rewards[:, maddpg.episode_done] = np.array(
                     [episode_rew1, episode_rew2]).reshape((1, 2))
-                dset_options
                 dset_rewards.flush()
                 c_loss, a_loss = maddpg.update_policy(prioritized=True)
+                if OPTIONS:
+                    mult_factor = N_OPTIONS
+                else:
+                    mult_factor = 1
                 if c_loss is not None:
                     for i in range(len(c_loss)):
                         c_loss[i] = c_loss[i].data.cpu().numpy()
                     for i in range(len(a_loss)):
                         a_loss[i] = a_loss[i].data.cpu().numpy()
                     dset_closs[:, maddpg.episode_done] = np.array(
-                        c_loss).reshape((1, n_agents * N_OPTIONS))
+                        c_loss).reshape((1, n_agents * mult_factor))
                     dset_aloss[:, maddpg.episode_done] = np.array(
-                        a_loss).reshape((1, n_agents * N_OPTIONS))
+                        a_loss).reshape((1, n_agents * mult_factor))
                     dset_closs.flush()
                     dset_aloss.flush()
 
