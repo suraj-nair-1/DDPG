@@ -1,7 +1,7 @@
 from model import Critic, Actor, MetaCritic
 import torch as th
 from copy import deepcopy
-from memory import ReplayMemory
+from memory import ReplayMemory, Experience, ExperienceOptions
 from torch.optim import Adam
 from randomProcess import OrnsteinUhlenbeckProcess
 from torch.autograd import Variable
@@ -12,9 +12,6 @@ import time
 import os
 from collections import namedtuple
 import time
-
-Experience = namedtuple(
-    'Experience', ('states', 'actions', 'next_states', 'rewards', 'option'))
 
 
 def soft_update(target, source, t):
@@ -149,7 +146,7 @@ class OMADDPG:
         for agent in range(self.n_agents):
             transitions = self.memory.sample(
                 self.batch_size, prioritized=prioritized)
-            batch = Experience(*zip(*transitions))
+            batch = ExperienceOptions(*zip(*transitions))
             non_final_mask = ByteTensor(list(map(lambda s: s is not None,
                                                  batch.next_states)))
             # state_batch: batch_size x n_agents x dim_obs
@@ -226,7 +223,7 @@ class OMADDPG:
             for opt in range(self.n_options):
                 transitions = self.memory.sample_option(
                     self.batch_size, agent, opt, prioritized=prioritized)
-                batch = Experience(*zip(*transitions))
+                batch = ExperienceOptions(*zip(*transitions))
                 non_final_mask = ByteTensor(list(map(lambda s: s is not None,
                                                      batch.next_states)))
                 # state_batch: batch_size x n_agents x dim_obs
@@ -475,7 +472,7 @@ class MADDPG:
             print(time.time(), "A", agent)
             transitions = self.memory.sample(
                 self.batch_size, prioritized=prioritized)
-            batch = self.memory.Experience(*zip(*transitions))
+            batch = Experience(*zip(*transitions))
             non_final_mask = ByteTensor(list(map(lambda s: s is not None,
                                                  batch.next_states)))
             # state_batch: batch_size x n_agents x dim_obs
@@ -564,7 +561,7 @@ class MADDPG:
     def select_action(self, state_batch, i):
         act = self.actors[i](state_batch.view(1, -1))
         # self.steps_done += 1
-        return act[0], [None, None]
+        return act[0]
 
     def critic_predict(self, state_batch, action_batch, i):
         return self.critics[i](state_batch, action_batch)
