@@ -253,8 +253,12 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue, st
                 pass
 
         if terminal == 5:
+            player_queue.close()
+            root_queue.close()
+            feedback_queue.close()
+            gc.collect() 
             print("SLEEPING UNTIL KILLED")
-            time.sleep(3600)
+            time.sleep(3600) 
             break 
 
 
@@ -330,7 +334,7 @@ def extra_stats(maddpg, player_num, opt):
 
 
 def run():
-    sp = multiprocessing.get_context("spawn")
+    sp = multiprocessing.get_context("spawn") 
     n_agents = 2
     n_states = 77
     n_actions = 10
@@ -416,6 +420,10 @@ def run():
             if not ((ep1 == ep2) and (step1 == step2)):
                 p1.terminate()
                 p2.terminate()
+                p1.join()
+                p2.join()  
+                del p1
+                del p2
 
             print("MAIN LOOP", maddpg.episode_done,
                   sys.getsizeof(maddpg.memory.memory))
@@ -463,7 +471,15 @@ def run():
                     pass
 
                 p1.terminate()
-                p2.terminate() 
+                p2.terminate()
+                p1.join()
+                p2.join() 
+                p1.close()
+                p2.close() 
+                del p1
+                del p2
+                #p1.close() 
+                #p2.close() 
                 print("PROCESSES TERMINATED")
 
                 time.sleep(300)
