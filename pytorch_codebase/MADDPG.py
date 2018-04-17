@@ -190,16 +190,17 @@ class OMADDPG:
 
             nextq = th.cat(nextq, dim=1)
             nextq, _ = nextq.max(dim=1)
+            nextq = nextq * self.GAMMA + reward_batch[:, agent].squeeze(1) 
 
-            clusters, _ = kmeans(encodings, 2)
-            diff1 = (encodings - clusters[0]).mean(axis=1)
-            diff2 = (encodings - clusters[1]).mean(axis=1)
-            diff = np.abs(np.stack([diff1, diff2], axis=1))
-            diff = np.argmin(diff, axis=1)
+            #clusters, _ = kmeans(encodings, 2)
+            #diff1 = (encodings - clusters[0]).mean(axis=1)
+            #diff2 = (encodings - clusters[1]).mean(axis=1)
+            #diff = np.abs(np.stack([diff1, diff2], axis=1))
+            #diff = np.argmin(diff, axis=1)
             # matches_cluster = meta_option =
-            nextq = nextq * self.GAMMA + \
-                Variable(th.from_numpy(diff).float()) + \
-                reward_batch[:, agent].squeeze(1)
+            #nextq = nextq * self.GAMMA + \
+            #    Variable(th.from_numpy(diff).float()) + \
+            #    reward_batch[:, agent].squeeze(1)
 
             # next_q = self.meta_critic(meta_state_1, )
 
