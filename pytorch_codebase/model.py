@@ -47,11 +47,11 @@ class MetaCritic(nn.Module):
 
     # obs: batch_size * obs_dim
     def forward(self, obs, opts):
-        result = F.relu(self.FC1(obs))
-        combined = th.cat([result, opts], 1)
-        result = F.relu(self.FC2(combined))
-        result = F.relu(self.FC3(result))
-        return self.FC5(F.relu(self.FC4(result)))
+        result_state = F.relu(self.FC1(obs))
+        combined = th.cat([result_state, opts], 1)
+        resulta = F.relu(self.FC2(combined))
+        result = F.relu(self.FC3(resulta))
+        return self.FC5(F.relu(self.FC4(result))), result_state
 
 
 class Actor(nn.Module):
