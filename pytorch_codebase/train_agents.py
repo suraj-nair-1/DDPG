@@ -22,8 +22,8 @@ from pympler import asizeof
 import gc
 
 
-#LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
-LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
+LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+#LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 # LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
 #LOGPATH = "/home/anshul/Desktop/"
 
@@ -53,7 +53,7 @@ EPS_GREEDY_INIT = 1.0
 
 # Size of replay buffer
 capacity = 1000000
-batch_size = 1024
+batch_size = 256 
 eps_before_train = 10
 
 GPUENABLED = False
