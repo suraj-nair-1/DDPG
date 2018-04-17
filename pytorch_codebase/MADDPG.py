@@ -177,7 +177,6 @@ class OMADDPG:
 
             current_Q, encodings = self.meta_critic(meta_state, meta_option)
             encodings = encodings.data.numpy()
-            print("ENCODINGS", encodings.shape)
 
             nextq = []
             for o1 in range(self.n_options):
@@ -190,13 +189,17 @@ class OMADDPG:
 
             nextq = th.cat(nextq, dim=1)
             nextq, _ = nextq.max(dim=1)
+            # nextq = nextq * self.GAMMA + reward_batch[:, agent].squeeze(1)
 
             clusters, _ = kmeans(encodings, 2)
             diff1 = (encodings - clusters[0]).mean(axis=1)
             diff2 = (encodings - clusters[1]).mean(axis=1)
             diff = np.abs(np.stack([diff1, diff2], axis=1))
             diff = np.argmin(diff, axis=1)
-            # matches_cluster = meta_option =
+
+            diff = (diff == np.argmax(
+                meta_option.data.numpy(), axis=1)).astype(np.int32)
+
             nextq = nextq * self.GAMMA + \
                 Variable(th.from_numpy(diff).float()) + \
                 reward_batch[:, agent].squeeze(1)
