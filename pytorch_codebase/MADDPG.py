@@ -12,6 +12,7 @@ import time
 import os
 from collections import namedtuple
 import time
+from scipy.cluster.vq import kmeans
 
 
 def soft_update(target, source, t):
@@ -174,19 +175,31 @@ class OMADDPG:
             whole_action = action_batch.view(self.batch_size, -1)
             whole_option = option_batch.view(self.batch_size, -1)
 
-            current_Q = self.meta_critic(meta_state, meta_option)
+            current_Q, encodings = self.meta_critic(meta_state, meta_option)
+            encodings = encodings.data.numpy()
+            print("ENCODINGS", encodings.shape)
+
             nextq = []
             for o1 in range(self.n_options):
                 oo1 = Variable(
                     th.zeros(len(current_Q), self.n_options).type(FloatTensor))
                 oo1[:, o1] = 1.0
-                nextq.append(self.meta_critic(non_final_next_states[
-                    :, agent, :], oo1.view(-1, self.n_options)))
+                nextq_1, _ = self.meta_critic(
+                    non_final_next_states[:, agent, :], oo1.view(-1, self.n_options))
+                nextq.append(nextq_1)
 
             nextq = th.cat(nextq, dim=1)
             nextq, _ = nextq.max(dim=1)
-            nextq = nextq * self.GAMMA
-            nextq = nextq * self.GAMMA + reward_batch[:, agent].squeeze(1)
+
+            clusters, _ = kmeans(encodings, 2)
+            diff1 = (encodings - clusters[0]).mean(axis=1)
+            diff2 = (encodings - clusters[1]).mean(axis=1)
+            diff = np.abs(np.stack([diff1, diff2], axis=1))
+            diff = np.argmin(diff, axis=1)
+            # matches_cluster = meta_option =
+            nextq = nextq * self.GAMMA + \
+                Variable(th.from_numpy(diff).float()) + \
+                reward_batch[:, agent].squeeze(1)
 
             # next_q = self.meta_critic(meta_state_1, )
 
@@ -327,7 +340,7 @@ class OMADDPG:
         for o1 in range(self.n_options):
             oo1 = Variable(th.zeros(self.n_options).type(th.FloatTensor))
             oo1[o1] = 1.0
-            td1 = self.meta_critic(state_batch.view(
+            td1, _ = self.meta_critic(state_batch.view(
                 1, -1), oo1.view(-1, self.n_options))
             try:
                 if td1 > mx:

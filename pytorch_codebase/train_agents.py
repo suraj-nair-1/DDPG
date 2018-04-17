@@ -22,8 +22,8 @@ from pympler import asizeof
 import gc
 
 
-LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
-#LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
+#LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 # LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
 #LOGPATH = "/home/anshul/Desktop/"
 
@@ -268,7 +268,7 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue, st
             player_queue.close()
             root_queue.close()
             feedback_queue.close()
-            gc.collect() 
+            gc.collect()
             print("SLEEPING UNTIL KILLED")
             time.sleep(3600)
             break
@@ -335,7 +335,8 @@ def extra_stats(maddpg, player_num, opt=0):
             whole_state, kick_batch, player_num, opt)
         target_good = maddpg.critic_predict(
             whole_state, good_batch, player_num, opt)
-        target_bad = maddpg.critic_predict(whole_state, bad_batch, player_num, opt)
+        target_bad = maddpg.critic_predict(
+            whole_state, bad_batch, player_num, opt)
     else:
         target_move = maddpg.critic_predict(
             whole_state, move_batch, player_num)
@@ -362,7 +363,7 @@ def extra_stats(maddpg, player_num, opt=0):
 
 
 def run():
-    sp = multiprocessing   
+    sp = multiprocessing
     n_agents = 2
     n_states = 77
     n_actions = 10
@@ -458,10 +459,10 @@ def run():
 
             if not ((ep1 == ep2) and (step1 == step2)):
                 p1.join()
-                p2.join() 
+                p2.join()
                 p1.terminate()
-                p2.terminate()  
-                del p1 
+                p2.terminate()
+                del p1
                 del p2
 
             print("MAIN LOOP", maddpg.episode_done,
@@ -520,11 +521,11 @@ def run():
                 p1.join()
                 p2.join()
                 p1.terminate()
-                p2.terminate()  
+                p2.terminate()
                 del p1
                 del p2
-                #p1.close() 
-                #p2.close() 
+                # p1.close()
+                # p2.close()
                 print("PROCESSES TERMINATED")
 
                 time.sleep(300)
@@ -559,7 +560,8 @@ def run():
                         all_logstats = []
                         for p in range(n_agents):
                             for opt in range(N_OPTIONS):
-                                all_logstats.append(extra_stats(maddpg, p, opt))
+                                all_logstats.append(
+                                    extra_stats(maddpg, p, opt))
                         all_logstats = np.stack(all_logstats)
                     else:
                         p1_logstats = extra_stats(maddpg, 0)
@@ -575,7 +577,8 @@ def run():
 
                     if OPTIONS:
                         for j1 in range(N_OPTIONS):
-                            dset_options[j1, maddpg.episode_done] = p1optcounts[j1]
+                            dset_options[
+                                j1, maddpg.episode_done] = p1optcounts[j1]
                             dset_options[N_OPTIONS + j1,
                                          maddpg.episode_done] = p2optcounts[j1]
                         for opt in range(N_OPTIONS):
@@ -624,12 +627,12 @@ def run():
                 # copy_maddpg.memory.position = 0
                 copy_maddpg.memory = None
                 r1.put(copy_maddpg)
-                r2.put(copy_maddpg) 
-                #gc.collect()
+                r2.put(copy_maddpg)
+                # gc.collect()
                 #memls = []
                 #rn = locals()
                 #l = None
-                #for l in rn.keys():
+                # for l in rn.keys():
                 #    memls.append((l, asizeof.asizeof(rn[l])))
                 #print(memls, "MAIN")
 
