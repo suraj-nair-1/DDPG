@@ -203,7 +203,6 @@ class OMADDPG:
             nextq = nextq * self.GAMMA + \
                 Variable(th.from_numpy(diff).float()) + \
                 reward_batch[:, agent].squeeze(1)
-
             # next_q = self.meta_critic(meta_state_1, )
 
             # directq = []
