@@ -22,8 +22,8 @@ from pympler import asizeof
 import gc
 
 
-# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
-LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
+LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+# LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 # LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
 #LOGPATH = "/home/anshul/Desktop/"
 
