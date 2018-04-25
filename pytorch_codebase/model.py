@@ -51,7 +51,8 @@ class MetaCritic(nn.Module):
         combined = th.cat([result_state, opts], 1)
         resulta = F.relu(self.FC2(combined))
         result = F.relu(self.FC3(resulta))
-        return self.FC5(F.relu(self.FC4(result))), result_state
+        result = F.relu(self.FC4(result))
+        return self.FC5(result), result
 
 
 class Actor(nn.Module):
