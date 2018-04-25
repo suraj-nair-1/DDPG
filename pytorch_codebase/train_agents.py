@@ -53,7 +53,7 @@ EPS_GREEDY_INIT = 1.0
 
 # Size of replay buffer
 capacity = 1000000
-batch_size = 256 
+batch_size = 1024  
 eps_before_train = 10
 
 GPUENABLED = False
