@@ -23,7 +23,7 @@ import gc
 
 
 LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
-#LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
+# LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 # LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
 #LOGPATH = "/home/anshul/Desktop/"
 
@@ -31,6 +31,8 @@ LOGNUM = int(sys.argv[2])
 OPTIONS = int(sys.argv[3])
 N_OPTIONS = 2
 PRIORITIZED = True
+
+PLAYBACK = False
 
 # Max training steps
 MAX_EPISODES = 50000
@@ -48,14 +50,13 @@ TAU = 0.001
 EPS_ITERATIONS_ANNEAL = 300000
 
 # Noise for exploration
-EPS_GREEDY_INIT = 1.0
+EPS_GREEDY_INIT = 1.0 
 # EPS_ITERATIONS_ANNEAL = 1000000
 
 # Size of replay buffer
 capacity = 1000000
-batch_size = 1024  
-eps_before_train = 10
-
+batch_size = 1024 
+eps_before_train = 10  
 GPUENABLED = False
 ORACLE = False
 PORT = int(sys.argv[1])
@@ -84,7 +85,7 @@ def connect():
 
 
 def take_action_and_step(a, o, env, eps):
-    if (np.random.random_sample() <= eps):
+    if (np.random.random_sample() <= eps) and (not PLAYBACK):
         acts = np.random.uniform(1, 10, 4)
         a[:4] = acts / np.sum(acts)
         a[4] = np.random.uniform(0, 100)
@@ -108,6 +109,7 @@ def take_action_and_step(a, o, env, eps):
         action = (KICK, a[8], a[9])
 
     env.act(*action)
+    print(o, action)
     terminal = env.step()
     s1 = env.getState()
     if OPTIONS:
@@ -417,6 +419,9 @@ def run():
         maddpg = MADDPG(n_agents, n_states, n_actions,
                         batch_size, capacity, eps_before_train)
 
+    if PLAYBACK:
+        maddpg.load(LOGPATH, 20, 4500)
+
     p1 = sp.Process(
         target=run_process, args=(maddpg, 0, q1, r1, fdbk1, start_ep))
     p2 = sp.Process(
@@ -465,18 +470,13 @@ def run():
                 del p1
                 del p2
 
-            print("MAIN LOOP", maddpg.episode_done,
-                  sys.getsizeof(maddpg.memory.memory))
-            if OPTIONS and maddpg.episode_done > 2:
-                print(sys.getsizeof(maddpg.memory.option_mem[0][0]))
-                print(sys.getsizeof(maddpg.memory.option_mem[0][1]))
-                print(sys.getsizeof(maddpg.memory.option_mem[1][0]))
-                print(sys.getsizeof(maddpg.memory.option_mem[1][1]))
+            print("MAIN LOOP", maddpg.episode_done)
 
             maddpg.episode_done = ep1
             start_ep = ep1
             if (maddpg.episode_done > 0) and (maddpg.episode_done % 500 == 0) and (step1 == 0):
-                maddpg.save(LOGPATH, LOGNUM)
+                if not PLAYBACK:
+                    maddpg.save(LOGPATH, LOGNUM)
             sts = torch.stack([p1_sts, p2_sts])
             acts = torch.stack([p1_acts, p2_acts])
             sts1 = torch.stack([p1_sts1, p2_sts1])
@@ -597,7 +597,10 @@ def run():
                 dset_rewards[:, maddpg.episode_done] = np.array(
                     [episode_rew1, episode_rew2]).reshape((1, 2))
                 dset_rewards.flush()
-                c_loss, a_loss = maddpg.update_policy(prioritized=True)
+                if not PLAYBACK:
+                    c_loss, a_loss = None, None
+                else:
+                    c_loss, a_loss = maddpg.update_policy(prioritized=True)
                 if OPTIONS:
                     mult_factor = N_OPTIONS
                 else:
@@ -640,8 +643,9 @@ def run():
             fdbk2.put(0)
 
             # training step every 10 steps
-            if itr % 10 == 0:
-                c_loss, a_loss = maddpg.update_policy(prioritized=True)
+            if not PLAYBACK:
+                if itr % 10 == 0:
+                    c_loss, a_loss = maddpg.update_policy(prioritized=True)
 
             maddpg.steps_done += 1
             itr += 1
