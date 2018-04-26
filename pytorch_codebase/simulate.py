@@ -3,7 +3,6 @@ import itertools
 from hfo import *
 
 import numpy as np
-import tensorflow as tf
 import threading
 import torch
 from torch.autograd import Variable
@@ -20,9 +19,9 @@ import traceback
 import subprocess
 
 #LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
-#LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
+LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 #LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
-LOGPATH = "/home/anshul/Desktop/"
+# LOGPATH = "/home/anshul/Desktop/"
 
 LOGNUM = int(sys.argv[2])
 EPDONE_LOAD = int(sys.argv[3])
@@ -201,14 +200,14 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
             player_queue.put((states.data, actions, states1,
                               action_rewards, terminal, rr, (ep, j)))
             states = states1
-            print "PLAYER", player_num, maddpg.episode_done
+            print("PLAYER", player_num, maddpg.episode_done)
 
             ITERATIONS += 1
 
             # EPISODE IS OVER
             ###########################################################
             if terminal:
-                print terminal
+                print(terminal)
                 assert terminal != 5
                 print('| Reward: ', rr, " | Episode", ep)
                 break
@@ -221,7 +220,8 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue):
             try:
                 new = feedback_queue.get(timeout=1.5)
             except:
-                print "TIMEOUT"
+                print("TIMEOUT")
+
 
 def run():
     n_agents = 2
@@ -245,7 +245,7 @@ def run():
     p2 = multiprocessing.Process(
         target=run_process, args=(maddpg, 1, q2, r2, fdbk2))
 
-    print "Started"
+    print("Started")
 
     p1.start()
     time.sleep(5)
@@ -269,7 +269,7 @@ def run():
             assert((ep1 == ep2) and (step1 == step2))
 
             maddpg.episode_done = ep1
-            print "MAIN LOOP", maddpg.episode_done
+            print("MAIN LOOP", maddpg.episode_done)
 
             sts = torch.stack([p1_sts, p2_sts])
             acts = torch.stack([p1_acts, p2_acts])
@@ -301,7 +301,7 @@ def run():
 
             maddpg.steps_done += 1
             itr += 1
-    except Exception, e:
+    except Exception as e:
         #subprocess.call('killall -9 rcssserver', shell=True)
         r1.put(None)
         r2.put(None)
