@@ -30,29 +30,26 @@ class Critic(nn.Module):
         return self.FC5(F.relu(self.FC4(result)))
 
 
-class MetaCritic(nn.Module):
+class MetaActor(nn.Module):
 
     def __init__(self, n_agent, dim_observation, n_option):
-        super(MetaCritic, self).__init__()
+        super(MetaActor, self).__init__()
         self.n_agent = n_agent
         self.dim_observation = dim_observation
         obs_dim = dim_observation
         act_dim = n_option
 
-        self.FC1 = nn.Linear(obs_dim, 1024)
-        self.FC2 = nn.Linear(1024 + act_dim, 512)
-        self.FC3 = nn.Linear(512, 256)
-        self.FC4 = nn.Linear(256, 128)
-        self.FC5 = nn.Linear(128, 1)
+        self.FC1 = nn.Linear(obs_dim, 512)
+        self.FC2 = nn.Linear(512, 256)
+        self.FC3 = nn.Linear(256, 128)
+        self.FC4 = nn.Linear(128, act_dim)
 
     # obs: batch_size * obs_dim
-    def forward(self, obs, opts):
-        result_state = F.relu(self.FC1(obs))
-        combined = th.cat([result_state, opts], 1)
-        resulta = F.relu(self.FC2(combined))
-        result = F.relu(self.FC3(resulta))
-        result = F.relu(self.FC4(result))
-        return self.FC5(result), result
+    def forward(self, obs):
+        result = F.relu(self.FC1(obs))
+        result = F.relu(self.FC2(result))
+        result = F.relu(self.FC3(result))
+        return F.softmax(self.FC4(result), dim=1), result
 
 
 class Actor(nn.Module):
