@@ -1,4 +1,4 @@
-from model import Critic, Actor, MetaCritic
+from model import Critic, Actor, MetaActor
 import torch as th
 from copy import deepcopy
 from memory import ReplayMemory, Experience, ExperienceOptions
@@ -35,12 +35,12 @@ class OMADDPG:
         self.actors = [Actor(dim_obs, dim_act)
                        for i in range(n_agents * n_options)]
         self.critics = [Critic(n_agents, dim_obs,
-                               dim_act) for i in range(n_agents * n_options)]
-        self.meta_critic = MetaCritic(n_agents, dim_obs, n_options)
+                               dim_act) for i in range(n_agents)]
+        self.meta_actor = MetaActor(n_agents, dim_obs, n_options)
 
         self.actors_target = deepcopy(self.actors)
         self.critics_target = deepcopy(self.critics)
-        self.meta_critics_target = deepcopy(self.meta_critic)
+        self.meta_actor_target = deepcopy(self.meta_actor)
 
         self.n_agents = n_agents
         self.n_states = dim_obs
@@ -57,14 +57,14 @@ class OMADDPG:
         self.tau = 0.01
 
         self.var = [1.0 for i in range(n_agents)]
-        self.meta_optimizer = Adam(self.meta_critic.parameters(), lr=0.0001)
+        self.meta_optimizer = Adam(self.meta_actor.parameters(), lr=0.0001)
         self.critic_optimizer = [Adam(x.parameters(),
                                       lr=0.001) for x in self.critics]
         self.actor_optimizer = [Adam(x.parameters(),
                                      lr=0.0001) for x in self.actors]
 
         if self.use_cuda:
-            self.meta_critic.cuda()
+            self.meta_actor.cuda()
             for x in self.actors:
                 x.cuda()
             for x in self.critics:
@@ -101,7 +101,7 @@ class OMADDPG:
 
     def to_gpu(self):
         self.use_cuda = True
-        self.meta_critic.cuda()
+        self.meta_actor.cuda()
         for x in self.actors:
             x.cuda()
             x.low_action_bound.cuda()
@@ -117,7 +117,7 @@ class OMADDPG:
 
     def to_cpu(self):
         self.use_cuda = False
-        self.meta_critic.cpu()
+        self.meta_actor.cpu()
         for x in self.actors:
             x.cpu()
             x.low_action_bound.cpu()
@@ -175,208 +175,137 @@ class OMADDPG:
             whole_action = action_batch.view(self.batch_size, -1)
             whole_option = option_batch.view(self.batch_size, -1)
 
-            current_Q, encodings = self.meta_critic(meta_state, meta_option)
-            encodings = encodings.data.numpy()
+            pred_options, encodings = self.meta_actor(meta_state)
+            entropy = (-1 * th.sum((pred_options *
+                                    pred_options.log()), dim=1)).mean()
 
-            nextq = []
-            for o1 in range(self.n_options):
-                oo1 = Variable(
-                    th.zeros(len(current_Q), self.n_options).type(FloatTensor))
-                oo1[:, o1] = 1.0
-                nextq_1, _ = self.meta_critic(
-                    non_final_next_states[:, agent, :], oo1.view(-1, self.n_options))
-                nextq.append(nextq_1)
+            clusters, _ = kmeans(encodings.data.numpy(), 2)
+            clusters = Variable(th.from_numpy(clusters).float())
+            diff1 = (encodings - clusters[0]).mean(dim=1)
+            diff2 = (encodings - clusters[1]).mean(dim=1)
+            diff = (th.stack([diff1, diff2], dim=1)).abs()
+            _, diff = th.min(diff, dim=1)
+            _, pred_option_max = th.max(pred_options, dim=1)
+            match_clusters = (diff == pred_option_max).float()
 
-            nextq = th.cat(nextq, dim=1)
-            nextq, _ = nextq.max(dim=1)
-            # nextq = nextq * self.GAMMA + reward_batch[:, agent].squeeze(1)
+            meta_loss = match_clusters.mean(dim=0) + (-0.1 * entropy)
 
-            clusters, _ = kmeans(encodings, 2)
-            diff1 = (encodings - clusters[0]).mean(axis=1)
-            diff2 = (encodings - clusters[1]).mean(axis=1)
-            diff = np.abs(np.stack([diff1, diff2], axis=1))
-            diff = np.argmin(diff, axis=1)
+            # nextq = nextq * self.GAMMA + \
+            #     Variable(th.from_numpy(diff).float()) + \
+            #     reward_batch[:, agent].squeeze(1)
 
-            diff = (diff == np.argmax(
-                meta_option.data.numpy(), axis=1)).astype(np.int32)
+            # loss_Q = nn.MSELoss()(current_Q, nextq.detach())
+            # loss_Q.backward()
+            meta_loss.backward(retain_graph=True)
+            # self.meta_optimizer.step()
 
-            nextq = nextq * self.GAMMA + \
-                Variable(th.from_numpy(diff).float()) + \
-                reward_batch[:, agent].squeeze(1)
-            # next_q = self.meta_critic(meta_state_1, )
+            self.critic_optimizer[agent].zero_grad()
+            current_Q = self.critics[agent](whole_state, whole_action)
 
-            # directq = []
-            # for item in range(len(option_batch)):
-            #     opt = option_batch[item, agent, :]
+            non_final_next_actions = [
+                self.actors_target[i](non_final_next_states[:,
+                                                            i,
+                                                            :]) for i in range(
+                                                                self.n_agents)]
+            non_final_next_actions = th.stack(non_final_next_actions)
+#            non_final_next_actions = Variable(non_final_next_actions)
+            non_final_next_actions = (
+                non_final_next_actions.transpose(0,
+                                                 1).contiguous())
 
-            #     opt = np.argmax(opt.cpu().data.numpy())
+            target_Q = Variable(th.zeros(
+                self.batch_size).type(FloatTensor))
+            target_Q[non_final_mask] = self.critics_target[agent](
+                non_final_next_states.view(-1,
+                                           self.n_agents * self.n_states),
+                non_final_next_actions.view(-1,
+                                            self.n_agents * self.n_actions))
 
-            #     q1 = self.critics_target[opt](
-            # whole_state[item].unsqueeze(0), whole_action[item].unsqueeze(0))
+            # scale_reward: to scale reward in Q functions
+            target_Q = (target_Q * self.GAMMA) + (
+                reward_batch[:, agent] * scale_reward).view(-1)
 
-            #     for o1 in range(self.n_options):
-            #         oo1 = Variable(
-            #             th.zeros(self.n_options).type(FloatTensor))
-            #         oo1[o1] = 1.0
-
-            #         td1 = self.meta_critic(non_final_next_states[item, agent, :].unsqueeze(
-            #             0), oo1.view(-1, self.n_options))
-            #         try:
-            #             if td1 > mx:
-            #                 mx = td1
-            #         except:
-            #             mx = td1
-
-            #     directq.append((q1 + self.GAMMA * mx).view(-1))
-
-            # directq = th.stack(directq)
-            loss_Q = nn.MSELoss()(current_Q, nextq.detach())
+            loss_Q = nn.MSELoss()(current_Q, target_Q.detach())
             loss_Q.backward()
-            self.meta_optimizer.step()
+            self.critic_optimizer[agent].step()
+
             print("UPDATETIME META", time.time() - t0)
-
+            opt_acts = []
             for opt in range(self.n_options):
-                transitions = self.memory.sample_option(
-                    self.batch_size, agent, opt, prioritized=prioritized)
-                batch = ExperienceOptions(*zip(*transitions))
-                non_final_mask = ByteTensor(list(map(lambda s: s is not None,
-                                                     batch.next_states)))
-                # state_batch: batch_size x n_agents x dim_obs
-                state_batch = Variable(
-                    th.stack(batch.states).type(FloatTensor))
-                action_batch = Variable(
-                    th.stack(batch.actions).type(FloatTensor))
-                reward_batch = Variable(
-                    th.stack(batch.rewards).type(FloatTensor))
-                option_batch = Variable(
-                    th.stack(batch.option).type(FloatTensor))
-
-                # : (batch_size_non_final) x n_agents x dim_obs
-                non_final_next_states = Variable(th.stack(
-                    [s for s in batch.next_states
-                     if s is not None]).type(FloatTensor))
-
-                # for current agent
-                whole_state = state_batch.view(self.batch_size, -1)
-                whole_action = action_batch.view(self.batch_size, -1)
-                self.critic_optimizer[agent * self.n_options + opt].zero_grad()
-                current_Q = self.critics[
-                    agent * self.n_options + opt](whole_state, whole_action)
-
-                non_final_next_actions = [
-                    self.actors_target[i](non_final_next_states[:,
-                                                                i,
-                                                                :]) for i in range(
-                                                                    self.n_agents)]
-                non_final_next_actions = th.stack(non_final_next_actions)
-    #            non_final_next_actions = Variable(non_final_next_actions)
-                non_final_next_actions = (
-                    non_final_next_actions.transpose(0,
-                                                     1).contiguous())
-
-                target_Q = Variable(th.zeros(
-                    self.batch_size).type(FloatTensor))
-                target_Q[non_final_mask] = self.critics_target[agent * self.n_options + opt](
-                    non_final_next_states.view(-1,
-                                               self.n_agents * self.n_states),
-                    non_final_next_actions.view(-1,
-                                                self.n_agents * self.n_actions))
-
-                # scale_reward: to scale reward in Q functions
-                target_Q = (target_Q * self.GAMMA) + (
-                    reward_batch[:, agent] * scale_reward).view(-1)
-
-                loss_Q = nn.MSELoss()(current_Q, target_Q.detach())
-                loss_Q.backward()
-                self.critic_optimizer[agent * self.n_options + opt].step()
-
                 self.actor_optimizer[agent * self.n_options + opt].zero_grad()
                 state_i = state_batch[:, agent, :]
                 action_i = self.actors[agent * self.n_options + opt](state_i)
-                action_i.retain_grad()
-                ac = action_batch.clone()
-                ac[:, agent, :] = action_i
-                whole_action = ac.view(self.batch_size, -1)
-                actor_loss = - \
-                    self.critics[agent * self.n_options +
-                                 opt](whole_state, whole_action)
-                actor_loss = actor_loss.mean()
-                actor_loss.backward()
+                opt_acts.append(action_i)
 
-                params = action_i[:, 4:]
-                high = self.actors[
-                    agent * self.n_options + opt].high_action_bound
-                high = high.repeat(action_i.size()[0], 1)
-                low = self.actors[
-                    agent * self.n_options + opt].low_action_bound
-                low = low.repeat(action_i.size()[0], 1)
+            action = th.stack(opt_acts, dim=1)
+            w = pred_options.unsqueeze(1)
+            act = w.bmm(action)
+            act = act.squeeze(1)
 
-                if params.data.type() == 'torch.cuda.FloatTensor':
-                    high = high.cuda()
-                    low = low.cuda()
+            act.retain_grad()
+            ac = action_batch.clone()
+            ac[:, agent, :] = act
+            whole_action = ac.view(self.batch_size, -1)
+            actor_loss = - \
+                self.critics[agent](whole_state, whole_action)
+            actor_loss = actor_loss.mean()
+            actor_loss.backward()
 
-                pmax = ((high - params) / (high - low))
-                pmin = ((params - low) / (high - low))
+            params = act[:, 4:]
+            high = self.actors[
+                agent * self.n_options + opt].high_action_bound
+            high = high.repeat(act.size()[0], 1)
+            low = self.actors[
+                agent * self.n_options + opt].low_action_bound
+            low = low.repeat(act.size()[0], 1)
 
-                grad = action_i.grad[:, 4:]
-                g1 = (grad < 0).float() * pmin
-                g2 = (grad >= 0).float() * pmax
+            if params.data.type() == 'torch.cuda.FloatTensor':
+                high = high.cuda()
+                low = low.cuda()
 
-                action_i.grad = th.cat([action_i.grad[:, :4], (g1 + g2)], 1)
+            pmax = ((high - params) / (high - low))
+            pmin = ((params - low) / (high - low))
 
+            grad = act.grad[:, 4:]
+            g1 = (grad < 0).float() * pmin
+            g2 = (grad >= 0).float() * pmax
+
+            act.grad = th.cat([act.grad[:, :4], (g1 + g2)], 1)
+
+            for opt in range(self.n_options):
                 self.actor_optimizer[agent * self.n_options + opt].step()
-                c_loss.append(loss_Q)
-                a_loss.append(actor_loss)
-            print("UPDATETIME POLICIES", time.time() - t0)
+            self.meta_optimizer.step()
+            c_loss.append(loss_Q)
+            a_loss.append(actor_loss)
 
+            print("UPDATETIME POLICIES", time.time() - t0)
         if self.steps_done % 100 == 0 and self.steps_done > 0:
-            for i in range(len(self.actors)):
+            for i in range(len(self.critics)):
                 soft_update(self.critics_target[i], self.critics[i], self.tau)
+            for i in range(len(self.actors)):
                 soft_update(self.actors_target[i], self.actors[i], self.tau)
+            soft_update(self.meta_actor_target, self.meta_actor, self.tau)
 
         print("UPDATETIME", time.time() - t0)
         # print c_loss, a_loss
         return c_loss, a_loss
 
     def select_action(self, state_batch, i):
-        for o1 in range(self.n_options):
-            oo1 = Variable(th.zeros(self.n_options).type(th.FloatTensor))
-            oo1[o1] = 1.0
-            td1, _ = self.meta_critic(state_batch.view(
-                1, -1), oo1.view(-1, self.n_options))
-            try:
-                if td1 > mx:
-                    mx = td1
-                    mx_o = o1
-            except:
-                mx = td1
-                mx_o = o1
+        act1 = self.actors_target[i * self.n_options](state_batch.view(1, -1))
+        act2 = self.actors_target[
+            i * self.n_options + 1](state_batch.view(1, -1))
+        act_raw = th.stack([act1, act2], dim=1)
+        w, _ = self.meta_actor_target(state_batch.view(1, -1))
+        w2 = w.unsqueeze(1)
+        act = w2.bmm(act_raw)
+        act = act.squeeze(1)
 
-        act = self.actors[i * self.n_options + o1](state_batch.view(1, -1))
+        _, opt = w.max(1)
         # self.steps_done += 1
-        return act[0], o1
+        return act[0], int(opt[0].data.numpy())
 
-    def critic_predict(self, state_batch, action_batch, i, opt):
-        # for o1 in range(self.n_options):
-        #     for o2 in range(self.n_options):
-        #         oo1 = Variable(th.zeros(self.n_options).type(th.FloatTensor))
-        #         oo1[o1] = 1.0
-        #         oo2 = Variable(th.zeros(self.n_options).type(th.FloatTensor))
-        #         oo2[o2] = 1.0
-
-        #         print state_batch.size()
-        #         print th.stack([oo1, oo2]).view(-1, self.n_agents * self.n_options).size()
-        #         td1 = self.meta_critic(state_batch[i].view(1, -1), th.stack([oo1, oo2]).view(-1,
-        #                                                                                      self.n_agents * self.n_options))
-        #         try:
-        #             if td1 > mx:
-        #                 mx = td1
-        #                 mx_o = [o1, o2]
-        #         except:
-        #             mx = td1
-        #             mx_o = [o1, o2]
-
-        return self.critics[i * self.n_options + opt](state_batch, action_batch)
+    def critic_predict(self, state_batch, action_batch, i):
+        return self.critics[i](state_batch, action_batch)
 
 
 class MADDPG:
