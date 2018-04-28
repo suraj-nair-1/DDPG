@@ -200,9 +200,13 @@ class OMADDPG:
             diff = (diff == np.argmax(
                 meta_option.data.numpy(), axis=1)).astype(np.int32)
 
-            nextq = nextq * self.GAMMA + \
-                Variable(th.from_numpy(diff).float()) + \
-                reward_batch[:, agent].squeeze(1)
+            #nextq = nextq * self.GAMMA + \
+            #    Variable(th.from_numpy(diff).float()) + \
+            #    reward_batch[:, agent].squeeze(1)
+            
+            nextq = Variable(th.from_numpy(diff).float()) 
+
+
             # next_q = self.meta_critic(meta_state_1, )
 
             # directq = []

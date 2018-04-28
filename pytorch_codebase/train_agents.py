@@ -448,6 +448,8 @@ def run():
         while True:
             # State_t, Action, State_t+1, transition reward, terminal, episodre
             # reward, episode #
+            print(p1optcounts)
+            print(p2optcounts) 
             if OPTIONS:
                 p1_sts, p1_acts, p1_sts1, p1_rws, terminal1, episode_rew1, ep1, o1 = q1.get()
                 p2_sts, p2_acts, p2_sts1, p2_rws, terminal2, episode_rew2, ep2, o2 = q2.get()
@@ -597,7 +599,7 @@ def run():
                 dset_rewards[:, maddpg.episode_done] = np.array(
                     [episode_rew1, episode_rew2]).reshape((1, 2))
                 dset_rewards.flush()
-                if not PLAYBACK:
+                if PLAYBACK:
                     c_loss, a_loss = None, None
                 else:
                     c_loss, a_loss = maddpg.update_policy(prioritized=True)
