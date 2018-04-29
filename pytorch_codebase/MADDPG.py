@@ -272,7 +272,9 @@ class OMADDPG:
 
             act.grad = th.cat([act.grad[:, :4], (g1 + g2)], 1)
 
-            self.actor_optimizer[agent * self.n_options + opt].step()
+            for opt in range(self.n_options):
+                self.actor_optimizer[agent * self.n_options + opt].step()
+            self.meta_optimizer.step()
             c_loss.append(loss_Q)
             a_loss.append(actor_loss)
 
