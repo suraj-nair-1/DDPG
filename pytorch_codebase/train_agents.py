@@ -50,13 +50,13 @@ TAU = 0.001
 EPS_ITERATIONS_ANNEAL = 300000
 
 # Noise for exploration
-EPS_GREEDY_INIT = 1.0 
+EPS_GREEDY_INIT = 1.0
 # EPS_ITERATIONS_ANNEAL = 1000000
 
 # Size of replay buffer
 capacity = 1000000
-batch_size = 1024 
-eps_before_train = 10  
+batch_size = 1024
+eps_before_train = 10
 GPUENABLED = False
 ORACLE = False
 PORT = int(sys.argv[1])
@@ -109,7 +109,6 @@ def take_action_and_step(a, o, env, eps):
         action = (KICK, a[8], a[9])
 
     env.act(*action)
-    print(o, action)
     terminal = env.step()
     s1 = env.getState()
     if OPTIONS:
@@ -326,31 +325,17 @@ def extra_stats(maddpg, player_num, opt=0):
     good_batch = good_batch.view(batch_size, -1)
     bad_batch = bad_batch.view(batch_size, -1)
 
-    if OPTIONS:
-        target_move = maddpg.critic_predict(
-            whole_state, move_batch, player_num, opt)
-        target_turn = maddpg.critic_predict(
-            whole_state, turn_batch, player_num, opt)
-        target_tackle = maddpg.critic_predict(
-            whole_state, tackle_batch, player_num, opt)
-        target_kick = maddpg.critic_predict(
-            whole_state, kick_batch, player_num, opt)
-        target_good = maddpg.critic_predict(
-            whole_state, good_batch, player_num, opt)
-        target_bad = maddpg.critic_predict(
-            whole_state, bad_batch, player_num, opt)
-    else:
-        target_move = maddpg.critic_predict(
-            whole_state, move_batch, player_num)
-        target_turn = maddpg.critic_predict(
-            whole_state, turn_batch, player_num)
-        target_tackle = maddpg.critic_predict(
-            whole_state, tackle_batch, player_num)
-        target_kick = maddpg.critic_predict(
-            whole_state, kick_batch, player_num)
-        target_good = maddpg.critic_predict(
-            whole_state, good_batch, player_num)
-        target_bad = maddpg.critic_predict(whole_state, bad_batch, player_num)
+    target_move = maddpg.critic_predict(
+        whole_state, move_batch, player_num)
+    target_turn = maddpg.critic_predict(
+        whole_state, turn_batch, player_num)
+    target_tackle = maddpg.critic_predict(
+        whole_state, tackle_batch, player_num)
+    target_kick = maddpg.critic_predict(
+        whole_state, kick_batch, player_num)
+    target_good = maddpg.critic_predict(
+        whole_state, good_batch, player_num)
+    target_bad = maddpg.critic_predict(whole_state, bad_batch, player_num)
 
     ep_move_q = target_move.mean().data.cpu().numpy()[0]
     ep_turn_q = target_turn.mean().data.cpu().numpy()[0]
@@ -376,7 +361,7 @@ def run():
                   '.txt', "w", libver='latest')
     stats_grp = f.create_group("statistics")
     if OPTIONS:
-        dset_scaling_factor = N_OPTIONS
+        dset_scaling_factor = 1
     else:
         dset_scaling_factor = 1
     dset_move = stats_grp.create_dataset(
@@ -399,7 +384,7 @@ def run():
         "ep_aloss", (n_agents * dset_scaling_factor, MAX_EPISODES), dtype='f')
     if OPTIONS:
         dset_options = stats_grp.create_dataset(
-            "ep_options", (n_agents * dset_scaling_factor, MAX_EPISODES), dtype='f')
+            "ep_options", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
     dset_numdone = stats_grp.create_dataset("ep_numdone", data=np.array([-1]))
     f.swmr_mode = True  # NECESSARY FOR SIMULTANEOUS READ/WRITE
 
@@ -558,17 +543,9 @@ def run():
             if (terminal1 != 0):
                 # Logging Stats
                 if len(maddpg.memory.memory) > batch_size:
-                    if OPTIONS:
-                        all_logstats = []
-                        for p in range(n_agents):
-                            for opt in range(N_OPTIONS):
-                                all_logstats.append(
-                                    extra_stats(maddpg, p, opt))
-                        all_logstats = np.stack(all_logstats)
-                    else:
-                        p1_logstats = extra_stats(maddpg, 0)
-                        p2_logstats = extra_stats(maddpg, 1)
-                        all_logstats = np.stack([p1_logstats, p2_logstats])
+                    p1_logstats = extra_stats(maddpg, 0)
+                    p2_logstats = extra_stats(maddpg, 1)
+                    all_logstats = np.stack([p1_logstats, p2_logstats])
 
                     dset_move[:, maddpg.episode_done] = all_logstats[:, 0]
                     dset_turn[:, maddpg.episode_done] = all_logstats[:, 1]
@@ -603,10 +580,10 @@ def run():
                     c_loss, a_loss = None, None
                 else:
                     c_loss, a_loss = maddpg.update_policy(prioritized=True)
-                if OPTIONS:
-                    mult_factor = N_OPTIONS
-                else:
-                    mult_factor = 1
+                # if OPTIONS:
+                #     mult_factor = N_OPTIONS
+                # else:
+                mult_factor = 1
                 if c_loss is not None:
                     for i in range(len(c_loss)):
                         c_loss[i] = c_loss[i].data.cpu().numpy()
