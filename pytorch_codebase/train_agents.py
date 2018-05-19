@@ -22,10 +22,10 @@ from pympler import asizeof
 import gc
 
 
-LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
-# LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
+# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 # LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
-#LOGPATH = "/home/anshul/Desktop/"
+# LOGPATH = "/home/anshul/Desktop/"
 
 LOGNUM = int(sys.argv[2])
 OPTIONS = int(sys.argv[3])
@@ -201,10 +201,11 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue, st
                 states = states.float()
             states = Variable(states).type(FloatTensor)
             if OPTIONS:
-                actions, o = maddpg.select_action(states, player_num)
+                actions, o = maddpg.select_action(
+                    states.unsqueeze(0), player_num)
             else:
-                actions = maddpg.select_action(states, player_num)
-            actions = actions.data
+                actions = maddpg.select_action(states.unsqueeze(0), player_num)
+            actions = actions[0].data
 
             if OPTIONS:
                 states1, terminal, actions, o = take_action_and_step(
@@ -379,9 +380,9 @@ def run():
     dset_rewards = stats_grp.create_dataset(
         "ep_reward", (n_agents, MAX_EPISODES), dtype='f')
     dset_closs = stats_grp.create_dataset(
-        "ep_closs", (n_agents * dset_scaling_factor, MAX_EPISODES), dtype='f')
+        "ep_closs", (dset_scaling_factor, MAX_EPISODES), dtype='f')
     dset_aloss = stats_grp.create_dataset(
-        "ep_aloss", (n_agents * dset_scaling_factor, MAX_EPISODES), dtype='f')
+        "ep_aloss", (dset_scaling_factor, MAX_EPISODES), dtype='f')
     if OPTIONS:
         dset_options = stats_grp.create_dataset(
             "ep_options", (n_agents * N_OPTIONS, MAX_EPISODES), dtype='f')
@@ -583,14 +584,10 @@ def run():
                 # else:
                 mult_factor = 1
                 if c_loss is not None:
-                    for i in range(len(c_loss)):
-                        c_loss[i] = c_loss[i].data.cpu().numpy()
-                    for i in range(len(a_loss)):
-                        a_loss[i] = a_loss[i].data.cpu().numpy()
-                    dset_closs[:, maddpg.episode_done] = np.array(
-                        c_loss).reshape((1, n_agents * mult_factor))
-                    dset_aloss[:, maddpg.episode_done] = np.array(
-                        a_loss).reshape((1, n_agents * mult_factor))
+                    c_loss = c_loss.data.cpu().numpy()
+                    a_loss = a_loss.data.cpu().numpy()
+                    dset_closs[0, maddpg.episode_done] = np.array(c_loss)
+                    dset_aloss[0, maddpg.episode_done] = np.array(a_loss)
                     dset_closs.flush()
                     dset_aloss.flush()
 
@@ -609,12 +606,12 @@ def run():
                 r1.put(copy_maddpg)
                 r2.put(copy_maddpg)
                 # gc.collect()
-                #memls = []
-                #rn = locals()
-                #l = None
+                # memls = []
+                # rn = locals()
+                # l = None
                 # for l in rn.keys():
                 #    memls.append((l, asizeof.asizeof(rn[l])))
-                #print(memls, "MAIN")
+                # print(memls, "MAIN")
 
             fdbk1.put(0)
             fdbk2.put(0)
