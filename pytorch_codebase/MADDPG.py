@@ -33,9 +33,9 @@ class OMADDPG:
     def __init__(self, n_agents, dim_obs, dim_act, batch_size,
                  capacity, episodes_before_train, n_options):
         self.actors = [Actor(dim_obs, dim_act)
-                       for i in range(n_agents * n_options)]
+                       for i in range(n_options)]
         self.critics = [Critic(n_agents, dim_obs,
-                               dim_act) for i in range(n_agents)]
+                               dim_act)]
         self.meta_actor = MetaActor(n_agents, dim_obs, n_options)
 
         self.actors_target = deepcopy(self.actors)
@@ -144,97 +144,116 @@ class OMADDPG:
 
         c_loss = []
         a_loss = []
+        transitions = self.memory.sample(
+            self.batch_size, prioritized=prioritized)
+        batch = ExperienceOptions(*zip(*transitions))
+        non_final_mask = ByteTensor(list(map(lambda s: s is not None,
+                                             batch.next_states)))
+        # state_batch: batch_size x n_agents x dim_obs
+        state_batch = Variable(
+            th.stack(batch.states).type(FloatTensor))
+        action_batch = Variable(
+            th.stack(batch.actions).type(FloatTensor))
+        reward_batch = Variable(
+            th.stack(batch.rewards).type(FloatTensor))
+        option_batch = Variable(
+            th.stack(batch.option).type(FloatTensor))
+
+        # : (batch_size_non_final) x n_agents x dim_obs
+        non_final_next_states = Variable(th.stack(
+            [s for s in batch.next_states
+             if s is not None]).type(FloatTensor))
+
+        # for current agent
+        whole_state = state_batch.view(self.batch_size, -1)
+        whole_action = action_batch.view(self.batch_size, -1)
+        whole_option = option_batch.view(self.batch_size, -1)
+        whole_reward = reward_batch.view(self.batch_size, -1)
+
+        self.meta_optimizer.zero_grad()
+        self.critic_optimizer[0].zero_grad()
+        for opt in range(self.n_options):
+            self.actor_optimizer[opt].zero_grad()
+
+        # loss_Q.backward()
+        loss_Q = 0
+        actor_loss_total = 0
+        # self.critic_optimizer[0].step()
+
         for agent in range(self.n_agents):
-            transitions = self.memory.sample(
-                self.batch_size, prioritized=prioritized)
-            batch = ExperienceOptions(*zip(*transitions))
-            non_final_mask = ByteTensor(list(map(lambda s: s is not None,
-                                                 batch.next_states)))
-            # state_batch: batch_size x n_agents x dim_obs
-            state_batch = Variable(
-                th.stack(batch.states).type(FloatTensor))
-            action_batch = Variable(
-                th.stack(batch.actions).type(FloatTensor))
-            reward_batch = Variable(
-                th.stack(batch.rewards).type(FloatTensor))
-            option_batch = Variable(
-                th.stack(batch.option).type(FloatTensor))
-
-            # : (batch_size_non_final) x n_agents x dim_obs
-            non_final_next_states = Variable(th.stack(
-                [s for s in batch.next_states
-                 if s is not None]).type(FloatTensor))
-
-            self.meta_optimizer.zero_grad()
-
-            # for current agent
             meta_state = state_batch[:, agent]
             meta_state_1 = non_final_next_states[:, agent]
             meta_option = option_batch[:, agent]
-            whole_state = state_batch.view(self.batch_size, -1)
-            whole_action = action_batch.view(self.batch_size, -1)
-            whole_option = option_batch.view(self.batch_size, -1)
 
-            pred_options, encodings = self.meta_actor(meta_state)
-            entropy = (-1 * th.sum((pred_options *
-                                    pred_options.log()), dim=1)).mean()
+            index = th.LongTensor([agent, 1 - agent])
+            state_batch_ordered = state_batch.clone()
+            action_batch_ordered = action_batch.clone()
+            state_batch_ordered[:, index] = state_batch_ordered
+            action_batch_ordered[:, index] = action_batch_ordered
+            whole_state = state_batch_ordered.view(self.batch_size, -1)
+            whole_action = action_batch_ordered.view(self.batch_size, -1)
 
-            clusters, _ = kmeans(encodings.data.numpy(), 2)
-            clusters = Variable(th.from_numpy(clusters).float())
-            diff1 = (encodings - clusters[0]).mean(dim=1)
-            diff2 = (encodings - clusters[1]).mean(dim=1)
-            diff = (th.stack([diff1, diff2], dim=1)).abs()
-            _, diff = th.min(diff, dim=1)
-            _, pred_option_max = th.max(pred_options, dim=1)
-            match_clusters = (diff == pred_option_max).float()
+            current_Q = self.critics[0](whole_state, whole_action)
 
-            meta_loss = match_clusters.mean(dim=0) + (-0.1 * entropy)
+            non_final_next_actions = [self.select_action(non_final_next_states[:,
+                                                                               i,
+                                                                               :])[0] for i in range(self.n_agents)]
 
-            # nextq = nextq * self.GAMMA + \
-            #     Variable(th.from_numpy(diff).float()) + \
-            #     reward_batch[:, agent].squeeze(1)
-
-            # loss_Q = nn.MSELoss()(current_Q, nextq.detach())
-            # loss_Q.backward()
-            meta_loss.backward(retain_graph=True)
-            # self.meta_optimizer.step()
-
-            self.critic_optimizer[agent].zero_grad()
-            current_Q = self.critics[agent](whole_state, whole_action)
-
-            non_final_next_actions = [
-                self.actors_target[i](non_final_next_states[:,
-                                                            i,
-                                                            :]) for i in range(
-                                                                self.n_agents)]
             non_final_next_actions = th.stack(non_final_next_actions)
-#            non_final_next_actions = Variable(non_final_next_actions)
+    #            non_final_next_actions = Variable(non_final_next_actions)
             non_final_next_actions = (
                 non_final_next_actions.transpose(0,
                                                  1).contiguous())
 
+            non_final_next_states_ordered = non_final_next_states.clone()
+            non_final_next_actions_ordered = non_final_next_actions.clone()
+
+            non_final_next_states_ordered[
+                :, index] = non_final_next_states_ordered
+            non_final_next_actions_ordered[
+                :, index] = non_final_next_actions_ordered
+
             target_Q = Variable(th.zeros(
                 self.batch_size).type(FloatTensor))
-            target_Q[non_final_mask] = self.critics_target[agent](
-                non_final_next_states.view(-1,
-                                           self.n_agents * self.n_states),
-                non_final_next_actions.view(-1,
-                                            self.n_agents * self.n_actions))
+            target_Q[non_final_mask] = self.critics_target[0](
+                non_final_next_states_ordered.view(-1,
+                                                   self.n_agents * self.n_states),
+                non_final_next_actions_ordered.view(-1,
+                                                    self.n_agents * self.n_actions))
 
             # scale_reward: to scale reward in Q functions
             target_Q = (target_Q * self.GAMMA) + (
                 reward_batch[:, agent] * scale_reward).view(-1)
 
-            loss_Q = nn.MSELoss()(current_Q, target_Q.detach())
-            loss_Q.backward()
-            self.critic_optimizer[agent].step()
+            loss_Q += nn.MSELoss()(current_Q, target_Q.detach())
 
-            print("UPDATETIME META", time.time() - t0)
+            pred_options, encodings = self.meta_actor(meta_state)
+            meta_entropy = (-1 * th.sum((pred_options *
+                                         pred_options.log()), dim=1)).mean()
+
+            ########################################################
+            # CLUSTER LOSS
+            ########################################################
+            # clusters, _ = kmeans(encodings.data.numpy(), 2)
+            # clusters = Variable(th.from_numpy(clusters).float())
+            # diff1 = (encodings - clusters[0]).mean(dim=1)
+            # diff2 = (encodings - clusters[1]).mean(dim=1)
+            # diff = (th.stack([diff1, diff2], dim=1)).abs()
+            # _, diff = th.min(diff, dim=1)
+            # _, pred_option_max = th.max(pred_options, dim=1)
+            # match_clusters = (diff == pred_option_max).float()
+            # meta_loss = match_clusters.mean(dim=0) + (-0.1 * entropy)
+            meta_loss = (-0.1 * meta_entropy)
+            ########################################################
+
+            # loss_Q = nn.MSELoss()(current_Q, nextq.detach())
+            # loss_Q.backward()
+            # meta_loss.backward(retain_graph=True)
+            # self.meta_optimizer.step()
+
             opt_acts = []
             for opt in range(self.n_options):
-                self.actor_optimizer[agent * self.n_options + opt].zero_grad()
-                state_i = state_batch[:, agent, :]
-                action_i = self.actors[agent * self.n_options + opt](state_i)
+                action_i = self.actors[opt](meta_state)
                 opt_acts.append(action_i)
             
             action = th.stack(opt_acts, dim=1)
@@ -243,42 +262,46 @@ class OMADDPG:
             act = act.squeeze(1)
 
             act.retain_grad()
-            ac = action_batch.clone()
-            ac[:, agent, :] = act
-            whole_action = ac.view(self.batch_size, -1)
+            ac = action_batch_ordered.clone()
+            ac[:, 0, :] = act
+            whole_action_new = ac.view(self.batch_size, -1)
             actor_loss = - \
-                self.critics[agent](whole_state, whole_action)
-            actor_loss = actor_loss.mean()
-            actor_loss.backward()
+                self.critics[0](state_batch_ordered.view(
+                    self.batch_size, -1), whole_action_new)
 
-            params = act[:, 4:]
-            high = self.actors[
-                agent * self.n_options + opt].high_action_bound
-            high = high.repeat(act.size()[0], 1)
-            low = self.actors[
-                agent * self.n_options + opt].low_action_bound
-            low = low.repeat(act.size()[0], 1)
+            actor_loss_total += actor_loss.mean() + meta_loss
 
-            if params.data.type() == 'torch.cuda.FloatTensor':
-                high = high.cuda()
-                low = low.cuda()
+        loss_Q.backward()
+        self.critic_optimizer[0].step()
 
-            pmax = ((high - params) / (high - low))
-            pmin = ((params - low) / (high - low))
+        actor_loss_total.backward()
 
-            grad = act.grad[:, 4:]
-            g1 = (grad < 0).float() * pmin
-            g2 = (grad >= 0).float() * pmax
+        params = act[:, 4:]
+        high = self.actors[opt].high_action_bound
+        high = high.repeat(act.size()[0], 1)
+        low = self.actors[opt].low_action_bound
+        low = low.repeat(act.size()[0], 1)
 
-            act.grad = th.cat([act.grad[:, :4], (g1 + g2)], 1)
+        if params.data.type() == 'torch.cuda.FloatTensor':
+            high = high.cuda()
+            low = low.cuda()
 
-            for opt in range(self.n_options):
-                self.actor_optimizer[agent * self.n_options + opt].step()
-            self.meta_optimizer.step()
-            c_loss.append(loss_Q)
-            a_loss.append(actor_loss)
+        pmax = ((high - params) / (high - low))
+        pmin = ((params - low) / (high - low))
 
-            print("UPDATETIME POLICIES", time.time() - t0)
+        grad = act.grad[:, 4:]
+        g1 = (grad < 0).float() * pmin
+        g2 = (grad >= 0).float() * pmax
+
+        act.grad = th.cat([act.grad[:, :4], (g1 + g2)], 1)
+
+        for opt in range(self.n_options):
+            self.actor_optimizer[opt].step()
+        self.meta_optimizer.step()
+        c_loss.append(loss_Q)
+        a_loss.append(actor_loss_total)
+
+        print("UPDATETIME POLICIES", time.time() - t0)
         if self.steps_done % 100 == 0 and self.steps_done > 0:
             for i in range(len(self.critics)):
                 soft_update(self.critics_target[i], self.critics[i], self.tau)
@@ -290,22 +313,21 @@ class OMADDPG:
         # print c_loss, a_loss
         return c_loss, a_loss
 
-    def select_action(self, state_batch, i):
-        act1 = self.actors_target[i * self.n_options](state_batch.view(1, -1))
-        act2 = self.actors_target[
-            i * self.n_options + 1](state_batch.view(1, -1))
+    def select_action(self, state_batch, i=None):
+        act1 = self.actors_target[0](state_batch)
+        act2 = self.actors_target[1](state_batch)
         act_raw = th.stack([act1, act2], dim=1)
-        w, _ = self.meta_actor_target(state_batch.view(1, -1))
+        w, _ = self.meta_actor_target(state_batch)
         w2 = w.unsqueeze(1)
         act = w2.bmm(act_raw)
         act = act.squeeze(1)
 
         _, opt = w.max(1)
         # self.steps_done += 1
-        return act[0], int(opt[0].data.numpy())
+        return act, int(opt[0].data.numpy())
 
     def critic_predict(self, state_batch, action_batch, i):
-        return self.critics[i](state_batch, action_batch)
+        return self.critics[0](state_batch, action_batch)
 
 
 class MADDPG:
