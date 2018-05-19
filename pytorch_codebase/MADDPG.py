@@ -298,8 +298,6 @@ class OMADDPG:
         for opt in range(self.n_options):
             self.actor_optimizer[opt].step()
         self.meta_optimizer.step()
-        c_loss.append(loss_Q)
-        a_loss.append(actor_loss_total)
 
         print("UPDATETIME POLICIES", time.time() - t0)
         if self.steps_done % 100 == 0 and self.steps_done > 0:
@@ -311,7 +309,7 @@ class OMADDPG:
 
         print("UPDATETIME", time.time() - t0)
         # print c_loss, a_loss
-        return c_loss, a_loss
+        return loss_Q, actor_loss_total
 
     def select_action(self, state_batch, i=None):
         act1 = self.actors_target[0](state_batch)
