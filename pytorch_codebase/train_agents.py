@@ -25,7 +25,7 @@ import gc
 LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
 # LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 # LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
-#LOGPATH = "/home/anshul/Desktop/"
+# LOGPATH = "/home/anshul/Desktop/"
 
 LOGNUM = int(sys.argv[2])
 OPTIONS = int(sys.argv[3])
@@ -56,7 +56,7 @@ EPS_GREEDY_INIT = 1.0
 # Size of replay buffer
 capacity = 1000000
 batch_size = 1024
-eps_before_train = 10
+eps_before_train = 50
 GPUENABLED = False
 ORACLE = False
 PORT = int(sys.argv[1])
@@ -201,10 +201,11 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue, st
                 states = states.float()
             states = Variable(states).type(FloatTensor)
             if OPTIONS:
-                actions, o = maddpg.select_action(states, player_num)
+                actions, o = maddpg.select_action(
+                    states.unsqueeze(0), player_num)
             else:
-                actions = maddpg.select_action(states, player_num)
-            actions = actions.data
+                actions = maddpg.select_action(states.unsqueeze(0), player_num)
+            actions = actions[0].data
 
             if OPTIONS:
                 states1, terminal, actions, o = take_action_and_step(
@@ -609,12 +610,12 @@ def run():
                 r1.put(copy_maddpg)
                 r2.put(copy_maddpg)
                 # gc.collect()
-                #memls = []
-                #rn = locals()
-                #l = None
+                # memls = []
+                # rn = locals()
+                # l = None
                 # for l in rn.keys():
                 #    memls.append((l, asizeof.asizeof(rn[l])))
-                #print(memls, "MAIN")
+                # print(memls, "MAIN")
 
             fdbk1.put(0)
             fdbk2.put(0)
