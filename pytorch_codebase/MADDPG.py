@@ -176,8 +176,8 @@ class OMADDPG:
             self.actor_optimizer[opt].zero_grad()
 
         # loss_Q.backward()
-        loss_Q = 0
-        actor_loss_total = 0
+        loss_Q = 0.0
+        actor_loss_total = 0.0
         # self.critic_optimizer[0].step()
 
         for agent in range(self.n_agents):
@@ -225,11 +225,12 @@ class OMADDPG:
             target_Q = (target_Q * self.GAMMA) + (
                 reward_batch[:, agent] * scale_reward).view(-1)
 
-            loss_Q += nn.MSELoss()(current_Q, target_Q.detach())
+            loss_Q_step = nn.MSELoss()(current_Q, target_Q.detach())
+            loss_Q += loss_Q_step
 
             pred_options, encodings = self.meta_actor(meta_state)
             meta_entropy = (-1 * th.sum((pred_options *
-                                         pred_options.log()), dim=1)).mean()
+                                         pred_options.log()), dim=1))
 
             ########################################################
             # CLUSTER LOSS
@@ -243,7 +244,7 @@ class OMADDPG:
             # _, pred_option_max = th.max(pred_options, dim=1)
             # match_clusters = (diff == pred_option_max).float()
             # meta_loss = match_clusters.mean(dim=0) + (-0.1 * entropy)
-            meta_loss = (-0.1 * meta_entropy)
+            meta_loss = (-0.01 * meta_entropy.mean())
             ########################################################
 
             # loss_Q = nn.MSELoss()(current_Q, nextq.detach())
@@ -257,6 +258,11 @@ class OMADDPG:
                 opt_acts.append(action_i)
             
             action = th.stack(opt_acts, dim=1)
+
+            p1_act = action[:, 0, :]
+            p2_act = action[:, 1, :]
+            seperation_loss = 0.001 * (p1_act - p2_act).abs().mean()
+
             w = pred_options.unsqueeze(1)
             act = w.bmm(action)
             act = act.squeeze(1)
@@ -269,7 +275,7 @@ class OMADDPG:
                 self.critics[0](state_batch_ordered.view(
                     self.batch_size, -1), whole_action_new)
 
-            actor_loss_total += actor_loss.mean() + meta_loss
+            actor_loss_total += actor_loss.mean() + meta_loss + seperation_loss
 
         loss_Q.backward()
         self.critic_optimizer[0].step()
@@ -299,7 +305,6 @@ class OMADDPG:
             self.actor_optimizer[opt].step()
         self.meta_optimizer.step()
 
-        print("UPDATETIME POLICIES", time.time() - t0)
         if self.steps_done % 100 == 0 and self.steps_done > 0:
             for i in range(len(self.critics)):
                 soft_update(self.critics_target[i], self.critics[i], self.tau)
@@ -308,7 +313,7 @@ class OMADDPG:
             soft_update(self.meta_actor_target, self.meta_actor, self.tau)
 
         print("UPDATETIME", time.time() - t0)
-        # print c_loss, a_loss
+        print("LOSSES", loss_Q, actor_loss_total)
         return loss_Q, actor_loss_total
 
     def select_action(self, state_batch, i=None):
