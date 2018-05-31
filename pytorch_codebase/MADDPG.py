@@ -64,7 +64,8 @@ class OMADDPG:
                                      lr=0.0001) for x in self.actors]
 
         if self.use_cuda:
-            self.meta_actor.cuda()
+            self.meta_actor.cuda() 
+            self.meta_actor_target.cuda() 
             for x in self.actors:
                 x.cuda()
             for x in self.critics:
@@ -102,6 +103,7 @@ class OMADDPG:
     def to_gpu(self):
         self.use_cuda = True
         self.meta_actor.cuda()
+        self.meta_actor_target.cuda() 
         for x in self.actors:
             x.cuda()
             x.low_action_bound.cuda()
@@ -117,7 +119,8 @@ class OMADDPG:
 
     def to_cpu(self):
         self.use_cuda = False
-        self.meta_actor.cpu()
+        self.meta_actor.cpu() 
+        self.meta_actor_target.cpu() 
         for x in self.actors:
             x.cpu()
             x.low_action_bound.cpu()
@@ -140,6 +143,7 @@ class OMADDPG:
             return None, None
 
         ByteTensor = th.cuda.ByteTensor if self.use_cuda else th.ByteTensor
+        LongTensor = th.cuda.LongTensor if self.use_cuda else th.LongTensor
         FloatTensor = th.cuda.FloatTensor if self.use_cuda else th.FloatTensor
 
         c_loss = []
@@ -185,7 +189,7 @@ class OMADDPG:
             meta_state_1 = non_final_next_states[:, agent]
             meta_option = option_batch[:, agent]
 
-            index = th.LongTensor([agent, 1 - agent])
+            index = th.LongTensor([agent, 1 - agent]).type(LongTensor) 
             state_batch_ordered = state_batch.clone()
             action_batch_ordered = action_batch.clone()
             state_batch_ordered[:, index] = state_batch_ordered
@@ -327,7 +331,7 @@ class OMADDPG:
 
         _, opt = w.max(1)
         # self.steps_done += 1
-        return act, int(opt[0].data.numpy())
+        return act, int(opt[0].data.cpu().numpy())
 
     def critic_predict(self, state_batch, action_batch, i):
         return self.critics[0](state_batch, action_batch)
