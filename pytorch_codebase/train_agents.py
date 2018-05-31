@@ -22,8 +22,8 @@ from pympler import asizeof
 import gc
 
 
-# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
-LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
+LOGPATH = "/cs/ml/ddpgHFO/DDPG/"
+#LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 # LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
 # LOGPATH = "/home/anshul/Desktop/"
 
@@ -57,7 +57,7 @@ EPS_GREEDY_INIT = 1.0
 capacity = 1000000
 batch_size = 1024
 eps_before_train = 10
-GPUENABLED = False
+GPUENABLED = True
 ORACLE = False
 PORT = int(sys.argv[1])
 SEED = int(sys.argv[4])
@@ -434,8 +434,6 @@ def run():
         while True:
             # State_t, Action, State_t+1, transition reward, terminal, episodre
             # reward, episode #
-            print(p1optcounts)
-            print(p2optcounts) 
             if OPTIONS:
                 p1_sts, p1_acts, p1_sts1, p1_rws, terminal1, episode_rew1, ep1, o1 = q1.get()
                 p2_sts, p2_acts, p2_sts1, p2_rws, terminal2, episode_rew2, ep2, o2 = q2.get()
@@ -471,7 +469,7 @@ def run():
 
             rws = np.stack([p1_rws, p2_rws])
             rws = torch.FloatTensor(rws)
-            if GPUENABLED:
+            if False: 
                 maddpg.memory.push(sts.cuda(), acts.cuda(),
                                    sts1.cuda(), rws.cuda())
             else:
@@ -480,7 +478,11 @@ def run():
                         FloatTensor)
                     os[0, int(o1)] = 1
                     os[1, int(o2)] = 1
-                    maddpg.memory.push(sts, acts, sts1, rws, os)
+                    if GPUENABLED:
+                        maddpg.memory.push(sts.cuda(), acts.cuda(),
+                                   sts1.cuda(), rws.cuda(), os.cuda())
+                    else:
+                        maddpg.memory.push(sts, acts, sts1, rws, os)
                 else:
                     maddpg.memory.push(sts, acts, sts1, rws)
 
