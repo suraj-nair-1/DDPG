@@ -64,8 +64,8 @@ class OMADDPG:
                                      lr=0.0001) for x in self.actors]
 
         if self.use_cuda:
-            self.meta_actor.cuda() 
-            self.meta_actor_target.cuda() 
+            self.meta_actor.cuda()
+            self.meta_actor_target.cuda()
             for x in self.actors:
                 x.cuda()
             for x in self.critics:
@@ -103,7 +103,7 @@ class OMADDPG:
     def to_gpu(self):
         self.use_cuda = True
         self.meta_actor.cuda()
-        self.meta_actor_target.cuda() 
+        self.meta_actor_target.cuda()
         for x in self.actors:
             x.cuda()
             x.low_action_bound.cuda()
@@ -119,8 +119,8 @@ class OMADDPG:
 
     def to_cpu(self):
         self.use_cuda = False
-        self.meta_actor.cpu() 
-        self.meta_actor_target.cpu() 
+        self.meta_actor.cpu()
+        self.meta_actor_target.cpu()
         for x in self.actors:
             x.cpu()
             x.low_action_bound.cpu()
@@ -189,7 +189,7 @@ class OMADDPG:
             meta_state_1 = non_final_next_states[:, agent]
             meta_option = option_batch[:, agent]
 
-            index = th.LongTensor([agent, 1 - agent]).type(LongTensor) 
+            index = th.LongTensor([agent, 1 - agent]).type(LongTensor)
             state_batch_ordered = state_batch.clone()
             action_batch_ordered = action_batch.clone()
             state_batch_ordered[:, index] = state_batch_ordered
@@ -260,7 +260,7 @@ class OMADDPG:
             for opt in range(self.n_options):
                 action_i = self.actors[opt](meta_state)
                 opt_acts.append(action_i)
-            
+
             action = th.stack(opt_acts, dim=1)
 
             p1_act = action[:, 0, :]
@@ -532,7 +532,7 @@ class MADDPG:
     def select_action(self, state_batch, i):
         act = self.actors[i](state_batch.view(1, -1))
         # self.steps_done += 1
-        return act[0]
+        return act
 
     def critic_predict(self, state_batch, action_batch, i):
         return self.critics[i](state_batch, action_batch)

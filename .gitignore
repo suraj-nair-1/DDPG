@@ -1,1 +1,5 @@
-models/
+old_tf_models/
+pytorch_models/
+*.pyc
+HFO/log/
+logging/

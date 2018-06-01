@@ -1,2 +1,0 @@
-model_checkpoint_path: "/Users/surajnair/Documents/Tech/research/DDPG/intermodel/closercritic.tflearn"
-all_model_checkpoint_paths: "/Users/surajnair/Documents/Tech/research/DDPG/intermodel/closercritic.tflearn"
