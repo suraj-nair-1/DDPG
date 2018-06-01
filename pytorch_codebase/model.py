@@ -6,6 +6,10 @@ import torch.nn.functional as F
 
 
 class Critic(nn.Module):
+    '''
+    Critic Model
+    Takes state and action, outputs a Q value
+    '''
 
     def __init__(self, n_agent, dim_observation, dim_action):
         super(Critic, self).__init__()
@@ -31,6 +35,10 @@ class Critic(nn.Module):
 
 
 class MetaActor(nn.Module):
+    '''
+    Takes a state and outputs a n_option size tensor 
+    which is used in a weighted sum of the subpolicy actions
+    '''
 
     def __init__(self, n_agent, dim_observation, n_option):
         super(MetaActor, self).__init__()
@@ -53,6 +61,10 @@ class MetaActor(nn.Module):
 
 
 class Actor(nn.Module):
+    '''
+    Base policy
+    Takes state and outputs action
+    '''
 
     def __init__(self, dim_observation, dim_action):
         super(Actor, self).__init__()
