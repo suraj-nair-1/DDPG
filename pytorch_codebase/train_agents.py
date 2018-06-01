@@ -25,8 +25,8 @@ import gc
 #####################################################################
 # SET LOGPATH DEPENDING ON USER
 #####################################################################
-LOGPATH = "/cs/ml/ddpgHFO/DDPG/"  # CMSCLUSTER LOGPATH
-# LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
+# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"  # CMSCLUSTER LOGPATH
+LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 # LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
 # LOGPATH = "/home/anshul/Desktop/"
 #####################################################################
@@ -43,7 +43,7 @@ MAX_EP_STEPS = 500  # Max episode length
 ACTOR_LEARNING_RATE = .001  # Base learning rate for the Actor network
 CRITIC_LEARNING_RATE = .001  # Base learning rate for the Critic Network
 GAMMA = 0.99  # Discount factor
-TAU = 0.001  # Soft target update param
+TAU = 0.1  # Soft target update param
 
 # EPSILON GREEDY EXPLORATION
 EPS_ITERATIONS_ANNEAL = 300000  # Anneal Over N Timesteps
@@ -457,7 +457,7 @@ def run():
         maddpg = MADDPG(n_agents, n_states, n_actions,
                         batch_size, capacity, eps_before_train)
 
-    # If playing back
+    # If playing back set which model to load
     if PLAYBACK:
         maddpg.load(LOGPATH, 20, 4500)
 
