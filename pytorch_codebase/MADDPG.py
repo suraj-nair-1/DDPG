@@ -414,7 +414,7 @@ class MADDPG:
         '''
         Save Model - takes logpath and lognum
         '''
-        path = logpath + "saved_models/run_" + \
+        path = logpath + "pytorch_models/run_" + \
             str(lognum) + "_" + str(self.episode_done)
         if not os.path.isdir(path):
             os.mkdir(path)
@@ -427,7 +427,7 @@ class MADDPG:
         '''
         Load a specific model at a certain timestep
         '''
-        path = logpath + "saved_models/run_" + \
+        path = logpath + "pytorch_models/run_" + \
             str(lognum) + "_" + str(episode_done)
         for i in range(self.n_agents):
             actor_path = os.path.join(path, 'actor_agent_%d.pt' % (i))

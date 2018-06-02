@@ -25,8 +25,8 @@ import gc
 #####################################################################
 # SET LOGPATH DEPENDING ON USER
 #####################################################################
-# LOGPATH = "/cs/ml/ddpgHFO/DDPG/"  # CMSCLUSTER LOGPATH
-LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
+LOGPATH = "/cs/ml/ddpgHFO/DDPG/"  # CMSCLUSTER LOGPATH
+# LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 # LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
 # LOGPATH = "/home/anshul/Desktop/"
 #####################################################################
@@ -54,7 +54,7 @@ EPS_GREEDY_MIN = 0.1
 capacity = 1000000  # Capacity of Replay Buffer
 batch_size = 1024
 eps_before_train = 10
-GPUENABLED = False  # Use GPU or only CPU
+GPUENABLED = True  # Use GPU or only CPU
 PORT = int(sys.argv[1])  # Port on which HFO Server Runs
 SEED = int(sys.argv[4])  # Random Seed
 
