@@ -25,7 +25,7 @@ import gc
 #####################################################################
 # SET LOGPATH DEPENDING ON USER
 #####################################################################
-LOGPATH = "/cs/ml/ddpgHFO/DDPG/"  # CMSCLUSTER LOGPATH
+LOGPATH = "../"  # CMSCLUSTER LOGPATH
 # LOGPATH = "/Users/surajnair/Documents/Tech/research/MADDPG_HFO/"
 # LOGPATH = "/Users/anshulramachandran/Documents/Research/yisong/"
 # LOGPATH = "/home/anshul/Desktop/"
@@ -352,7 +352,7 @@ def extra_stats(maddpg, player_num, opt=0):
             np.array([0, 0, 0, 1, 0, 0, 0, 0, np.random.uniform(0, 100), np.random.uniform(-180, 180)])))
 
         ball_angle_sin = elem[player_num][51]
-        ang = np.degrees(np.arcsin(ball_angle_sin.data[0]))
+        ang = np.degrees(np.arcsin(ball_angle_sin.item()))
         if ang > 0:
             bad_ang = ang - 180
         else:
@@ -383,12 +383,12 @@ def extra_stats(maddpg, player_num, opt=0):
         whole_state, good_batch, player_num)
     target_bad = maddpg.critic_predict(whole_state, bad_batch, player_num)
 
-    ep_move_q = target_move.mean().data.cpu().numpy()[0]
-    ep_turn_q = target_turn.mean().data.cpu().numpy()[0]
-    ep_tackle_q = target_tackle.mean().data.cpu().numpy()[0]
-    ep_kick_q = target_kick.mean().data.cpu().numpy()[0]
-    ep_good_q = target_good.mean().data.cpu().numpy()[0]
-    ep_bad_q = target_bad.mean().data.cpu().numpy()[0]
+    ep_move_q = target_move.mean().data.cpu().numpy()
+    ep_turn_q = target_turn.mean().data.cpu().numpy()
+    ep_tackle_q = target_tackle.mean().data.cpu().numpy()
+    ep_kick_q = target_kick.mean().data.cpu().numpy()
+    ep_good_q = target_good.mean().data.cpu().numpy()
+    ep_bad_q = target_bad.mean().data.cpu().numpy()
 
     player_stats = [ep_move_q, ep_turn_q,
                     ep_tackle_q, ep_kick_q, ep_good_q, ep_bad_q]
