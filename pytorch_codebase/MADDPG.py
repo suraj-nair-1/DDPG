@@ -237,7 +237,7 @@ class OMADDPG:
                 non_final_next_states_ordered.view(-1,
                                                    self.n_agents * self.n_states),
                 non_final_next_actions_ordered.view(-1,
-                                                    self.n_agents * self.n_actions))
+                                                    self.n_agents * self.n_actions)).squeeze()
 
             # Update with Bellman Equation
             target_Q = (target_Q * self.GAMMA) + (
@@ -528,7 +528,7 @@ class MADDPG:
             target_Q[non_final_mask] = self.critics_target[agent](
                 non_final_next_states.view(-1, self.n_agents * self.n_states),
                 non_final_next_actions.view(-1,
-                                            self.n_agents * self.n_actions))
+                                            self.n_agents * self.n_actions)).squeeze()
 
             # scale_reward: to scale reward in Q functions
             target_Q = (target_Q * self.GAMMA) + (
