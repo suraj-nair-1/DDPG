@@ -4,7 +4,6 @@ from copy import deepcopy
 from memory import ReplayMemory, Experience, ExperienceOptions
 from torch.optim import Adam
 from randomProcess import OrnsteinUhlenbeckProcess
-from torch.autograd import Variable
 import torch.nn as nn
 import numpy as np
 from params import scale_reward
@@ -175,19 +174,15 @@ class OMADDPG:
         batch = ExperienceOptions(*zip(*transitions))
         non_final_mask = ByteTensor(list(map(lambda s: s is not None,
                                              batch.next_states)))
-        state_batch = Variable(
-            th.stack(batch.states).type(FloatTensor))
-        action_batch = Variable(
-            th.stack(batch.actions).type(FloatTensor))
-        reward_batch = Variable(
-            th.stack(batch.rewards).type(FloatTensor))
-        option_batch = Variable(
-            th.stack(batch.option).type(FloatTensor))
+        state_batch = th.stack(batch.states).type(FloatTensor)
+        action_batch = th.stack(batch.actions).type(FloatTensor)
+        reward_batch = th.stack(batch.rewards).type(FloatTensor)
+        option_batch = th.stack(batch.option).type(FloatTensor)
 
         # Dont include terminal states in update
-        non_final_next_states = Variable(th.stack(
+        non_final_next_states = th.stack(
             [s for s in batch.next_states
-             if s is not None]).type(FloatTensor))
+             if s is not None]).type(FloatTensor)
 
         # Zero Grads
         self.meta_optimizer.zero_grad()
@@ -231,13 +226,12 @@ class OMADDPG:
                 :, index] = non_final_next_actions_ordered
 
             # Computer target Q for t+1
-            target_Q = Variable(th.zeros(
-                self.batch_size).type(FloatTensor))
+            target_Q = th.zeros(self.batch_size).type(FloatTensor)
             target_Q[non_final_mask] = self.critics[0](
                 non_final_next_states_ordered.view(-1,
                                                    self.n_agents * self.n_states),
                 non_final_next_actions_ordered.view(-1,
-                                                    self.n_agents * self.n_actions))
+                                                    self.n_agents * self.n_actions)).squeeze()
 
             # Update with Bellman Equation
             target_Q = (target_Q * self.GAMMA) + (
@@ -255,7 +249,7 @@ class OMADDPG:
             # CLUSTER LOSS - currently not being used
             ########################################################
             # clusters, _ = kmeans(encodings.data.numpy(), 2)
-            # clusters = Variable(th.from_numpy(clusters).float())
+            # clusters = th.from_numpy(clusters).float()
             # diff1 = (encodings - clusters[0]).mean(dim=1)
             # diff2 = (encodings - clusters[1]).mean(dim=1)
             # diff = (th.stack([diff1, diff2], dim=1)).abs()
@@ -498,13 +492,13 @@ class MADDPG:
             batch = Experience(*zip(*transitions))
             non_final_mask = ByteTensor(list(map(lambda s: s is not None,
                                                  batch.next_states)))
-            state_batch = Variable(th.stack(batch.states).type(FloatTensor))
-            action_batch = Variable(th.stack(batch.actions).type(FloatTensor))
-            reward_batch = Variable(th.stack(batch.rewards).type(FloatTensor))
+            state_batch = th.stack(batch.states).type(FloatTensor)
+            action_batch = th.stack(batch.actions).type(FloatTensor)
+            reward_batch = th.stack(batch.rewards).type(FloatTensor)
 
-            non_final_next_states = Variable(th.stack(
+            non_final_next_states = th.stack(
                 [s for s in batch.next_states
-                 if s is not None]).type(FloatTensor))
+                 if s is not None]).type(FloatTensor)
 
             # Critic update according to bellman eqn
             whole_state = state_batch.view(self.batch_size, -1)
@@ -518,17 +512,15 @@ class MADDPG:
                                                             :]) for i in range(
                                                                 self.n_agents)]
             non_final_next_actions = th.stack(non_final_next_actions)
-#            non_final_next_actions = Variable(non_final_next_actions)
             non_final_next_actions = (
                 non_final_next_actions.transpose(0,
                                                  1).contiguous())
 
-            target_Q = Variable(th.zeros(
-                self.batch_size).type(FloatTensor))
+            target_Q = th.zeros(self.batch_size).type(FloatTensor)
             target_Q[non_final_mask] = self.critics_target[agent](
                 non_final_next_states.view(-1, self.n_agents * self.n_states),
                 non_final_next_actions.view(-1,
-                                            self.n_agents * self.n_actions))
+                                            self.n_agents * self.n_actions)).squeeze()
 
             # scale_reward: to scale reward in Q functions
             target_Q = (target_Q * self.GAMMA) + (
