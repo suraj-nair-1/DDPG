@@ -58,7 +58,7 @@ GPUENABLED = True  # Use GPU or only CPU
 PORT = int(sys.argv[1])  # Port on which HFO Server Runs
 SEED = int(sys.argv[4])  # Random Seed
 
-FloatTensor = torch.cuda.FloatTensor if False else torch.FloatTensor
+FloatTensor = torch.cuda.FloatTensor if th.cuda.is_available() else torch.FloatTensor
 # Command to restart server
 server_launch_command = "./bin/HFO --headless --frames-per-trial=500 \
                         --untouched-time=500 --no-logging --fullstate \
@@ -247,10 +247,10 @@ def run_process(maddpg, player_num, player_queue, root_queue, feedback_queue, st
             # Take action and step
             if OPTIONS:
                 states1, terminal, actions, o = take_action_and_step(
-                    actions.numpy(), o, env, max(0.1, 1 - ITERATIONS / EPS_ITERATIONS_ANNEAL))
+                    actions.cpu().numpy(), o, env, max(0.1, 1 - ITERATIONS / EPS_ITERATIONS_ANNEAL))
             else:
                 states1, terminal, actions = take_action_and_step(
-                    actions.numpy(), -1, env, max(0.1, 1 - ITERATIONS / EPS_ITERATIONS_ANNEAL))
+                    actions.cpu().numpy(), -1, env, max(0.1, 1 - ITERATIONS / EPS_ITERATIONS_ANNEAL))
 
             # Get computed features
             curr_ball_proxs, curr_goal_dists, curr_kickables = get_curr_state_vars(
@@ -402,6 +402,8 @@ def run():
     '''
     # Set initial parameters for num agents and feature dimensions
     # for state and action
+    multiprocessing.set_start_method("spawn")
+
     sp = multiprocessing
     n_agents = 2
     n_states = 77
@@ -657,7 +659,7 @@ def run():
                 # Creates a lightweight version of the model to send to the
                 # processes
                 copy_maddpg = copy.deepcopy(maddpg)
-                copy_maddpg.to_cpu()
+                # copy_maddpg.to_cpu()
                 copy_maddpg.memory = None
                 r1.put(copy_maddpg)
                 r2.put(copy_maddpg)
